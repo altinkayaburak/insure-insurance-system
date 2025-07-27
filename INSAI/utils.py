@@ -1,3 +1,4 @@
+import json
 import re,logging,requests
 import ssl
 from decimal import Decimal, InvalidOperation
@@ -8,7 +9,7 @@ from django.conf import settings
 from datetime import timedelta
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
-from database.models import Customer, CustomerContact, AssetCars, ExternalPolicy
+from database.models import Customer, CustomerContact, AssetCars, ExternalTramerPolicy
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -199,7 +200,7 @@ def create_external_policy(agency_id, company_id, customer, car, data, branch_id
             belge = row.get("belgeBilgileri", {})
             alanlar = row.get("Alanlar", {})
 
-            obj, created = ExternalPolicy.objects.update_or_create(
+            obj, created = ExternalTramerPolicy.objects.update_or_create(
                 agency_id=agency_id,
                 PoliceNo=policy_key.get("policeNo"),
                 ZeyilNo=row.get("policeEkiNo"),
@@ -332,13 +333,25 @@ def apply_company_field_mapping(response_data, mapping_qs, company_id=None, poli
     return mapped_fields
 
 
-def apply_company_service_field_mapping(response_data, mapping_qs):
+def apply_company_service_field_mapping(response_data, mapping_qs, extra_fields=None):
     if isinstance(response_data, dict) and "value" in response_data and isinstance(response_data["value"], dict):
         data_source = response_data["value"]
     else:
         data_source = response_data
 
     mapped_fields = {}
+
+    # 🔹 Alanlar (Özel Tramer yapısı) ön hazırlık
+    alanlar_dict = {}
+    try:
+        alanlar_dict = data_source.get("Alanlar", {})
+        if not isinstance(alanlar_dict, dict):
+            alanlar_dict = {}
+    except Exception:
+        alanlar_dict = {}
+
+    print("🔎 Alanlar içerik tipi:", type(data_source["Alanlar"]))
+    print("📌 Alanlar örnek:", data_source["Alanlar"])
 
     for mapping in mapping_qs:
         key = mapping.key.KeyName if mapping.key else None
@@ -352,8 +365,13 @@ def apply_company_service_field_mapping(response_data, mapping_qs):
         val = None
 
         try:
-            # özel format kontrolü
-            if "ListOfInfo.BILGI_ADI=" in company_key:
+            # 🧩 1. Alanlar.XXX için özel kontrol
+            if company_key.startswith("Alanlar."):
+                key_name = company_key.split(".")[1]
+                val = alanlar_dict.get(key_name)
+
+            # 🧩 2. BILGI_ADI içeren özel yapı
+            elif "ListOfInfo.BILGI_ADI=" in company_key:
                 key_part = company_key.split("ListOfInfo.BILGI_ADI=")[-1].split(":")[0].strip()
                 value_field = company_key.split(":")[-1].strip()
                 list_info = get_by_path(data_source, "ListOfInfo.Info")
@@ -364,8 +382,12 @@ def apply_company_service_field_mapping(response_data, mapping_qs):
                         if info.get("BILGI_ADI") == key_part:
                             val = info.get(value_field)
                             break
+
+            # 🧩 3. Normal nested path
             elif "." in company_key:
                 val = get_by_path(data_source, company_key)
+
+            # 🧩 4. Düz dict alan
             else:
                 val = data_source.get(company_key)
 
@@ -376,12 +398,7 @@ def apply_company_service_field_mapping(response_data, mapping_qs):
         if isinstance(val, dict):
             val = None
 
-        #if val not in [None, '', {}, []]:
-            #print(f"✅ [Mapping OK] {key:<25} ← {company_key:<40} → {val}")
-        #else:
-            #print(f"⚠️ [Mapping BOŞ] {key:<25} → path: {company_key:<40} | Değer: {val}")
-
-        # 🎯 Parametre eşleşmesi
+        # 🎯 Parametre eşleşmesi varsa
         if parameter is not None:
             if (val is None or str(val).strip() == "") and (
                 company_param_val is None or str(company_param_val).strip() == ""):
@@ -396,7 +413,13 @@ def apply_company_service_field_mapping(response_data, mapping_qs):
         else:
             mapped_fields[key] = val
 
+    # ✅ Ekstra alanlar (örneğin TC formdan geliyorsa)
+    if extra_fields:
+        mapped_fields.update(extra_fields)
+
     return mapped_fields
+
+
 
 def save_transfer_phone_if_valid(customer, data: dict):
     print(f"📞 [DEBUG] save_transfer_phone_if_valid → customer: {customer.identity_number}")
@@ -498,7 +521,7 @@ def parse_date(val):
 
     val = str(val).strip().replace("\n", "").replace("\r", "")
 
-    # ✅ /Date(...) formatı
+    # ✅ .NET JSON tarih formatı: /Date(1753218000000)/
     if "Date(" in val:
         try:
             timestamp = int(re.search(r"\d+", val).group()) / 1000
@@ -506,17 +529,34 @@ def parse_date(val):
         except Exception as e:
             print("❌ .NET tarih parse hatası:", e, "| Girdi:", val)
 
+    # ✅ 13 haneli timestamp string (örnek: 1753218000000)
+    if val.isdigit() and len(val) == 13:
+        try:
+            return datetime.utcfromtimestamp(int(val) / 1000).date()
+        except Exception as e:
+            print("❌ Timestamp tarih parse hatası:", e, "| Girdi:", val)
+
     try:
+        # Türk tipi: 24.07.2025
         if re.match(r"\d{2}\.\d{2}\.\d{4}", val):
             return datetime.strptime(val, "%d.%m.%Y").date()
+
+        # ISO tipi: 2025-07-24
         elif re.match(r"\d{4}-\d{2}-\d{2}", val):
             return datetime.strptime(val[:10], "%Y-%m-%d").date()
+
+        # Slash tipi: 24/07/2025
         elif re.match(r"\d{2}/\d{2}/\d{4}", val):
             return datetime.strptime(val, "%d/%m/%Y").date()
+
+        # ISO full datetime: 2025-07-24T15:30:00
         elif re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", val):
             return datetime.strptime(val[:10], "%Y-%m-%d").date()
+
+        # YYYMMDD tipi: 20250724
         elif re.match(r"\d{8}", val):
             return datetime.strptime(val, "%Y%m%d").date()
+
     except Exception as e:
         print("❌ parse_date hatası:", e, "| Girdi:", val)
 

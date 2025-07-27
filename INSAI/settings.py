@@ -226,3 +226,8 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
+# Local ayar dosyası eklensin (şifre, bağlantı vs.)
+try:
+    from .settings_local import *
+except ImportError:
+    pass

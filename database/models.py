@@ -595,11 +595,10 @@ class Policy(models.Model):
 
         super().save(*args, **kwargs)
 
-class ExternalPolicy(models.Model):
-    customer = models.ForeignKey('Customer', on_delete=models.SET_NULL, null=True, related_name='external_policies')
-    asset_car = models.ForeignKey('AssetCars', on_delete=models.SET_NULL, null=True, related_name='external_policies')
-
-    branch = models.ForeignKey('PolicyBranch', on_delete=models.SET_NULL, null=True, blank=True,related_name='external_policies')
+class ExternalTramerPolicy(models.Model):
+    agency = models.ForeignKey('agency.Agency', on_delete=models.CASCADE, null=True, related_name='external_tramer_policies')
+    customer = models.ForeignKey('database.Customer', on_delete=models.SET_NULL, null=True, related_name='external_tramer_policies')
+    asset_car = models.ForeignKey('database.AssetCars', on_delete=models.SET_NULL, null=True, related_name='external_tramer_policies')
 
     AcentePartajNo = models.CharField(max_length=20, null=True, blank=True)
     PoliceTanzimTarihi = models.DateTimeField(null=True, blank=True)
@@ -618,10 +617,12 @@ class ExternalPolicy(models.Model):
     AracTrafikKademe = models.CharField(max_length=10, null=True, blank=True)
     AracKaskoKademe = models.CharField(max_length=10, null=True, blank=True)
 
-
     created_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
-        db_table = "external_policy"
+        db_table = "external_tramer_policy"
+        unique_together = ("agency", "PoliceNo", "YenilemeNo", "ZeyilNo")
+
 
 
 class PolicyStatus(models.Model):

@@ -37,7 +37,7 @@ urlpatterns = [
     path('get-model-years/', views.get_model_years, name='get_model_years'),
     path("get-arac-modelleri/", views.get_arac_modelleri, name="get_arac_modelleri"),
     path("egm-ray/", views.egm_ray, name="egm_ray"),
-    path("run-tramer-traffic/", views.run_tramer_traffic_api, name="run_tramer_traffic"),
+
 
 
 

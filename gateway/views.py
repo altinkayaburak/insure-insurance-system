@@ -10,9 +10,9 @@ from urllib3 import Retry
 
 from INSAI.utils import parse_date_from_string, SSLAdapter, clean_namespaces, get_by_path, \
     apply_company_service_field_mapping, create_or_update_customer_generic, create_or_update_asset_car_generic, \
-    create_external_policy, parse_date
-from database.models import City, ServiceConfiguration, Customer, CompanyServiceFieldMapping, ExternalPolicy,  \
-    InsuranceCompany
+    parse_date
+from database.models import City, ServiceConfiguration, Customer, CompanyServiceFieldMapping, \
+    InsuranceCompany, AssetCars, ExternalTramerPolicy
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from gateway.models import ProposalServiceLog, UavtDetails
@@ -2370,7 +2370,7 @@ def get_tescil_detay(agency_id, plaka_il_kodu, plaka, kimlik_no, service_id=80):
         return {"success": False, "error": str(e)}
 
 
-def run_tramer_traffic_service(request, form_data, agency_id):
+def run_and_process_tramer_policies(request, form_data, agency_id):
     print(f"\n🚦 Tramer trafik servisi başlatıldı | agency_id={agency_id}")
     service_id = 87
 
@@ -2397,9 +2397,10 @@ def run_tramer_traffic_service(request, form_data, agency_id):
         print("❌ Cookie bilgisi bulunamadı")
         return {"success": False, "error": "Servis kullanıcı bilgileri eksik."}
 
-    plaka_raw = form_data.get("AracPlakaTam", "")
+    plaka_raw = form_data.get("AracPlakaTam", "").replace(" ", "")
     if len(plaka_raw) < 4:
         return {"success": False, "error": "Geçersiz plaka formatı"}
+
     kimlik_no = form_data.get("SigortaliKimlikNo", "")
     vergi_no = form_data.get("SigortaliVergiKimlikNo", "")
 
@@ -2422,8 +2423,7 @@ def run_tramer_traffic_service(request, form_data, agency_id):
         headers.update(service.custom_headers)
 
     session = Session()
-    adapter = SSLAdapter()
-    adapter.max_retries = Retry(total=2, backoff_factor=1)
+    adapter = HTTPAdapter(max_retries=Retry(total=2, backoff_factor=1))
     session.mount("https://", adapter)
 
     try:
@@ -2434,97 +2434,165 @@ def run_tramer_traffic_service(request, form_data, agency_id):
             timeout=20
         )
         print("📥 Yanıt:", response.status_code)
-        print("📦 Servis cevabı (ilk 1000):\n", response.text[:1000])
-        response.raise_for_status()
-
-        try:
-            text = response.text.encode('utf-8', 'ignore').decode('unicode_escape')
-            text = re.sub(r'[\x00-\x1f]+', '', text)
-            text = text.replace("\\/", "/")
-            if text.startswith("\ufeff"):
-                text = text.replace("\ufeff", "")
-            response_json = json.loads(text)
-            print("✅ JSON parse başarılı")
-        except Exception as e:
-            print("❌ JSON parse hatası:", e)
-            return {"success": False, "error": f"JSON parse hatası: {e}", "raw": response.text[:2000]}
-
+        if response.status_code != 200:
+            return {"success": False, "error": f"Yanıt kodu: {response.status_code}"}
     except Exception as e:
-        print("❌ HTTP hatası:", e)
-        return {"success": False, "error": "Servis hatası: " + str(e)}
+        print("❌ Servis isteği hatası:", e)
+        return {"success": False, "error": str(e)}
 
-    # 🔎 Mapping tanımı
-    mapping_qs = CompanyServiceFieldMapping.objects.filter(
-        company_id=service.insurance_company_id,
-        service_id=service_id,
-        is_active=True
-    )
+    try:
+        raw_text = response.text
+        print("📦 İlk 500 karakter:", raw_text[:500])
 
-    # 🧹 Namespace temizliği ve path ile geçmiş poliçeleri çek
+        # ✅ JSON parse denemesi yapılmıyor
+        # Doğrudan metin üzerinden regex ile `gecmisPoliceler` listesi işlenecek
+        result = create_and_save_tramer_data(agency_id, raw_text)
+        print("✅ Kayıt işlemi tamamlandı.")
+        return {"success": True, "result": result}
+    except Exception as e:
+        print("❌ Kayıt işlemi patladı:", e)
+        return {"success": False, "error": str(e)}
 
-    clean_data = clean_namespaces(response_json)
-    gecmis_policeler = get_by_path(clean_data, "value.TramerSonucObjesi_sn040102TrafikPoliceSorguSonucu.gecmisPoliceler") or []
 
-    print(f"📄 Toplam {len(gecmis_policeler)} adet geçmiş poliçe bulundu")
 
-    results = []
-
-    for idx, p in enumerate(gecmis_policeler):
-        try:
-            print(f"\n📦 Poliçe {idx + 1}/{len(gecmis_policeler)} işleniyor...")
-
-            mapped = apply_company_service_field_mapping(p, mapping_qs)
-            for k, v in mapped.items():
-                if isinstance(v, str) and ("Date(" in v or "tarih" in k.lower()):
-                    parsed = parse_date(v)
-                    if parsed:
-                        mapped[k] = parsed
-
-            customer = create_or_update_customer_generic(agency_id=agency_id, customer_dict_list=[mapped])
-            identity_number = customer[0] if customer else None
-            if not identity_number:
-                print("❌ Müşteri TC alınamadı, atlanıyor")
-                continue
-
-            car = create_or_update_asset_car_generic(agency_id=agency_id, data=mapped, identity_number=identity_number)
-            policy = create_external_policy(
-                agency_id=agency_id,
-                company_id=service.insurance_company_id,
-                customer_id=identity_number,
-                car=car,
-                data=p,
-                branch_id=101
-            )
-
-            results.append({
-                "identity": identity_number,
-                "car": getattr(car, "id", None),
-                "policy_count": len(policy)
-            })
-            print(f"✅ Kayıt tamamlandı | TC: {identity_number}, Poliçe: {len(policy)}")
-
-        except Exception as e:
-            print(f"❌ Kayıt sırasında hata oluştu: {e}")
-            continue
-
-    return {
-        "success": True,
-        "total": len(results),
-        "results": results
+def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict:
+    print("\n🚧 Tramer response verisi isleniyor (regex tabanlı)")
+    result = {
+        "customers_created": 0,
+        "cars_created": 0,
+        "policies_created": 0,
+        "errors": []
     }
 
-
-
-@require_POST
-@login_required
-def run_tramer_traffic_api(request):
     try:
-        agency_id = request.user.agency_id
-        form_data = json.loads(request.body)
-        result = run_tramer_traffic_service(request, form_data, agency_id)
-        return JsonResponse(result)
-    except Exception as e:
-        return JsonResponse({"success": False, "error": str(e)})
+        # 1. Gecmis ve yurur poliçeleri ayrı ayrı yakala
+        gecmis_match = re.search(r'"gecmisPoliceler":\[(.*?)\]\s*,\s*"policeninHasarlari"', raw_text, re.DOTALL)
+        yurur_match = re.search(r'"yururPoliceler":\[(.*?)\](\s*,|\s*})', raw_text, re.DOTALL)
+
+        gecmis_blocks = re.findall(r'\{.*?\}', gecmis_match.group(1), re.DOTALL) if gecmis_match else []
+        yurur_blocks = re.findall(r'\{.*?\}', yurur_match.group(1), re.DOTALL) if yurur_match else []
+
+        all_blocks = gecmis_blocks + yurur_blocks
+        print(f"📆 Toplam poliçe sayısı (geçmiş+yürür): {len(all_blocks)}")
+
+        # ✅ Sigortalı bilgileri tek tek taranacak
+        sigortali_matches = re.findall(r'"sigortali"\s*:\s*\{(.*?)\}', raw_text, re.DOTALL)
+
+        for sig_block in sigortali_matches:
+            try:
+                identity_match = re.search(r'"tckimlikNo"\s*:\s*"(\d{11})"', sig_block)
+                ad_match = re.search(r'"adUnvan"\s*:\s*"([^"]+)"', sig_block)
+                soyad_match = re.search(r'"soyad"\s*:\s*"([^"]+)"', sig_block)
+
+                identity_number = identity_match.group(1) if identity_match else None
+                full_name = f"{ad_match.group(1)} {soyad_match.group(1)}" if ad_match and soyad_match else None
+
+                if not identity_number or not full_name:
+                    print(f"❌ Kimlik veya isim eksik, atlandı\n🔍 Sigortalı blok: {sig_block[:200]}")
+                    continue
+
+                customer_list = [{"SigortaliKimlikNo": identity_number, "full_name": full_name}]
+                created_ids = create_or_update_customer_generic(agency_id, customer_list)
+                if not created_ids:
+                    print("❌ Müşteri oluşturulamadı, geçildi.")
+                    continue
+
+                customer = Customer.objects.filter(identity_number=identity_number, agency_id=agency_id).first()
+                if not customer:
+                    print("❌ Müşteri bulunamadı (DB)")
+                    continue
+
+                result["customers_created"] += 1
+
+            except Exception as ex:
+                print(f"❌ Sigortalı işleme hatası: {ex}")
+                result["errors"].append(str(ex))
+
+        # Poliçe blokları ayrı ayrı işlenecek
+        for block in all_blocks:
+            try:
+                # 🔹 Araç bilgileri
+                car_data = {}
+                for key, field in [
+                    (r'"aciklama":"([^"]+)"', "AracMarkaAdi"),
+                    (r'"kod":"(\d+)"', "AracTipKodu"),
+                    (r'"modelYili":(\d+)', "AracModelYili"),
+                    (r'"motorNo":"([^"]*)"', "AracMotorNo"),
+                    (r'"sasiNo":"([^"]*)"', "AracSasiNo"),
+                    (r'"ilKodu":"(\d+)"', "AracPlakailKodu"),
+                    (r'"no":"([^"]+)"', "AracPlakaNo"),
+                    (r'"uygulanmisTarifeBasamakKodu":(\d+)', "AracTrafikKademe"),
+                    (r'"tescilTarihi":"\\/Date\((\d+)', "AracTescilTarihi")
+                ]:
+                    match = re.search(key, block)
+                    if match:
+                        val = match.group(1)
+                        car_data[field] = parse_date(int(val)) if "Tarih" in field else val
+
+                plaka = car_data.get("AracPlakaNo", "")
+                if plaka:
+                    car_data["AracPlakaTam"] = f"{car_data.get('AracPlakailKodu', '')} {plaka}"
+
+                customer = Customer.objects.filter(agency_id=agency_id, identity_number=car_data.get("AracPlakaNo")).first()
+                if not customer:
+                    continue
+
+                car_id = create_or_update_asset_car_generic(agency_id, customer.id, car_data)
+                if not car_id:
+                    print("❌ Araç kaydedilemedi")
+                    continue
+
+                car = AssetCars.objects.get(id=car_id)
+                result["cars_created"] += 1
+
+                # 🔹 Poliçe bilgileri
+                police_no = re.search(r'"policeNo":"(\d+)"', block)
+                zeyil = re.search(r'"policeEkiNo":"?(\d+)"?', block)
+                yenileme = re.search(r'"yenilemeNo":"?(\d+)"?', block)
+                acente = re.search(r'"acenteKod":"(\d+)"', block)
+                sirket = re.search(r'"sirketKodu":"(\d+)"', block)
+
+                tarih_matches = {
+                    "PoliceTanzimTarihi": r'"tanzimTarihi":"\\/Date\((\d+)\)',
+                    "PoliceBaslangicTarihi": r'"baslangicTarihi":"\\/Date\((\d+)\)',
+                    "PoliceBitisTarihi": r'"bitisTarihi":"\\/Date\((\d+)\)',
+                    "ZeyilBaslangicTarihi": r'"ekBaslangicTarihi":"\\/Date\((\d+)\)',
+                    "ZeyilBitisTarihi": r'"ekBitisTarihi":"\\/Date\((\d+)\)',
+                    "ZeyilTanzimTarihi": r'"belgeTarih":"([0-9.]+)"'
+                }
+
+                policy_data = {
+                    "agency_id": agency_id,
+                    "customer": customer,
+                    "asset_car": car,
+                    "PoliceNo": police_no.group(1) if police_no else None,
+                    "ZeyilNo": zeyil.group(1) if zeyil else None,
+                    "YenilemeNo": yenileme.group(1) if yenileme else None,
+                    "AcentePartajNo": acente.group(1) if acente else None,
+                    "SigortaSirketiKodu": sirket.group(1) if sirket else None,
+                }
+
+                for field, regex in tarih_matches.items():
+                    match = re.search(regex, block)
+                    if match:
+                        policy_data[field] = parse_date(match.group(1))
+
+                ExternalTramerPolicy.objects.create(**policy_data)
+                print(f"✅ Poliçe kaydedildi → {policy_data['PoliceNo']}")
+                result["policies_created"] += 1
+
+            except Exception as ex:
+                print(f"❌ Blok işleme hatası: {ex}")
+                result["errors"].append(str(ex))
+
+    except Exception as ex:
+        print(f"❌ Genel parse hatası: {ex}")
+        result["errors"].append(str(ex))
+
+    return result
+
+
+
 
 
 
