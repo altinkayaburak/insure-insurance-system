@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<style>
+
+  /* 📌 Modal Başlıkları */
+  .modal-header.bg-danger {
+    color: black;
+  }
+  .modal-title {
+    font-weight: 600;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧩 Modal içi padding */
+  .modal-body {
+    padding: 1.5rem;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+    .is-invalid {
+  border: 1px solid #dc3545 !important;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+   .table td {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-291f69 {
+  background-color: #291f69 !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+</style>
+
+<div class="container mt-5">
+  <!-- Başlık ve Arama -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <form method="get" action="{% url 'service_log_list' %}" class="d-flex gap-2" style="max-width: 300px;">
+      <div class="input-group">
+        <span class="input-group-text border bg-white">
+          <i class="bi bi-search text-muted"></i>
+        </span>
+        <input type="text" name="proposal_id" class="form-control border" placeholder="Proposal ID ara..." value="{{ proposal_id|default_if_none:'' }}">      </div>
+    </form>
+  </div>
+
+<!-- 📋 Servis Logları Tablosu -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #7951aa;">
+          <tr>
+            <th class="ps-3" style="width: 5%;">#</th>
+            <th style="width: 25%;">Servis Adı</th>
+            <th style="width: 20%;">Şirket</th>
+            <th style="width: 10%;">Durum</th>
+            <th style="width: 20%;">Tarih</th>
+            <th class="text-end" style="width: 10%;">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="ps-3 text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+            <td>{{ log.service_name }}</td>
+            <td>{{ log.company_name }}</td>
+            <td>
+              <span class="badge {% if log.status == '✅' %}bg-success{% else %}bg-danger{% endif %}">
+                {{ log.status }}
+              </span>
+            </td>
+            <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-291f69 " data-bs-toggle="modal" data-bs-target="#logModal-{{ log.id }}">
+                Görüntüle
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Kayıt bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+  {% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center py-3">
+  <ul class="pagination pagination-sm mb-0">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?proposal_id={{ proposal_id }}&page={{ page_obj.previous_page_number }}">«</a>
+    </li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?proposal_id={{ proposal_id }}&page={{ num }}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?proposal_id={{ proposal_id }}&page={{ page_obj.next_page_number }}">»</a>
+    </li>
+    {% endif %}
+  </ul>
+</div>
+{% endif %}
+
+  <!-- 📦 Proposal Key Gösterimi -->
+  <div class="card border-0 shadow-sm rounded-3 mb-5">
+    <div class="card-body">
+      <h5 class="mb-3">Proposal Keys</h5>
+      {% if proposal_keys %}
+        <pre class="p-3 bg-light rounded">{{ proposal_keys|safe }}</pre>
+      {% else %}
+        <p class="text-muted">Proposal anahtar verisi bulunamadı.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- 🔍 Modal - Gelen/Giden Veriler -->
+{% for log in logs %}
+<div class="modal fade" id="logModal-{{ log.id }}" tabindex="-1" aria-labelledby="logModalLabel-{{ log.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="logModalLabel-{{ log.id }}">Proposal ID: {{ log.proposal_id }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="fw-bold">Gönderilen:</h6>
+            <pre class="bg-light p-3 rounded" style="height: 85vh; overflow-y: auto;">{{ log.request_data|default:"Veri yok" }}</pre>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold">Gelen:</h6>
+            <pre class="bg-light p-3 rounded" style="height: 85vh; overflow-y: auto;">{{ log.response_data|default:"Veri yok" }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

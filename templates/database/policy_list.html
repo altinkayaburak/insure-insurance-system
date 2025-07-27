@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block content %}
+<style>
+  body {
+    background-color: #f8f9fa;
+  }
+
+  .policy-wrapper {
+    margin-top: 90px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.04);
+  }
+
+  table.dataTable td,
+  table.dataTable th {
+    vertical-align: middle;
+    font-size: 13px;
+  }
+
+  .search-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .search-bar input {
+    height: 30px;
+    font-size: 13px;
+    border-radius: 6px;
+    padding: 0 8px;
+    border: 1px solid #ced4da;
+  }
+
+  .search-bar button {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    background-color: #291f69;
+    color: white;
+    border: none;
+  }
+
+  .search-bar button:hover {
+    background-color: #3c2d89;
+  }
+
+  .dataTables_wrapper .pagination .page-link {
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+    color: #333 !important;
+    background-color: transparent;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin: 0 2px;
+  }
+
+  .dataTables_wrapper .pagination .page-item.active .page-link {
+    background-color: #291f69 !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .dataTables_wrapper .pagination .page-link:hover {
+    background-color: #291f69 !important;
+    color: #fff !important;
+  }
+
+  .policy-wrapper .table-responsive::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .policy-wrapper .table-responsive::-webkit-scrollbar-thumb {
+    background-color: #c8c8c8;
+    border-radius: 4px;
+  }
+
+  .policy-wrapper .table-responsive::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+  }
+
+  .dataTables_wrapper .dataTables_paginate {
+    margin: 8px 0 0 0 !important; /* ✅ doğru kullanım */
+  }
+.dataTables_paginate {
+  font-size: 12px;
+  padding: 22px 2px;
+}
+
+  td span[title] {
+  cursor: help;
+}
+
+  #scroll-container.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+#custom-context-menu {
+  min-width: 140px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+  #policy-table td,
+#policy-table th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.badge-aktif {
+  background-color: #e1b45f;
+}
+
+.badge-iptal {
+  background-color: #291f69;
+}
+</style>
+
+<div class="container policy-wrapper">
+  <!-- Arama kutusu -->
+  <div class="search-bar d-flex align-items-center mb-3" style="gap: 10px;">
+    <button id="excel-export-btn" title="Excel'e Aktar" style="background-color: #217346; color: white; border: none; border-radius: 6px; height: 30px; width: 34px; display: flex; align-items: center; justify-content: center; margin-right: 8px;">
+      <i class="bi bi-filetype-xlsx fs-5"></i>
+    </button>
+    <input type="text" id="policy-search-input" class="form-control form-control-sm" placeholder="Ara..." style="max-width: 200px;">
+    <button id="policy-search-btn" class="btn btn-sm btn-outline-primary">Ara</button>
+    <button id="open-advanced-filter" title="Gelişmiş Filtre" style="background-color: #291f69; color: white; border: none; border-radius: 6px; height: 30px; width: 34px; display: flex; align-items: center; justify-content: center;">
+      <i class="bi bi-sliders fs-5"></i>
+    </button>
+  </div>
+
+  <div class="mb-4"></div> <!-- 🔸 Tablo ile butonlar arası boşluk -->
+
+  <div id="scroll-container" class="table-responsive" style="overflow-x: auto; overflow-y: hidden;">
+    <table id="policy-table" class="table table-sm table-hover align-middle text-nowrap">
+      <thead class="table-light small">
+        <tr>
+          <th>Aktif</th>                  <!-- aktif -->
+          <th>Tanzim</th>                 <!-- police_tanzim (gizli) -->
+          <th>Başlangıç</th>              <!-- baslangic -->
+          <th>Bitiş</th>                  <!-- bitis -->
+          <th>Poliçe No</th>              <!-- police_no -->
+          <th>Zeyil</th>                  <!-- zeyil -->
+          <th>Yenileme</th>               <!-- yenileme -->
+          <th>Zeyil Kodu</th>             <!-- zeyil_kodu (gizli) -->
+          <th>Zeyil Adı</th>              <!-- zeyil_adi -->
+          <th>S. Ettiren TC</th>          <!-- sigorta_ettiren_tc -->
+          <th>Müşteri</th>                <!-- customer -->
+          <th>Sigortalı TC</th>           <!-- sigortali_tc -->
+          <th>Sigortalı</th>              <!-- insured -->
+          <th>Plaka</th>                  <!-- plaka -->
+          <th>Şirket</th>                 <!-- company -->
+          <th>Kod</th>                    <!-- product_code -->
+          <th>Branş</th>                  <!-- branch -->
+          <th>Kullanıcı</th>              <!-- user -->
+          <th>Şube</th>                   <!-- user_branch -->
+          <th>Brüt Prim (TL)</th>         <!-- brut_prim -->
+          <th>Net Prim (TL)</th>          <!-- net_prim (gizli) -->
+          <th>Komisyon (TL)</th>          <!-- komisyon_prim (gizli) -->
+          <th>Brüt Prim</th>              <!-- brut_prim_raw (gizli) -->
+          <th>Net Prim</th>               <!-- net_prim_raw (gizli) -->
+          <th>Komisyon</th>               <!-- komisyon_raw (gizli) -->
+          <th>Döviz Kuru</th>             <!-- doviz_kuru (gizli) -->
+          <th>Döviz Cinsi</th>            <!-- doviz_cinsi (gizli) -->
+          <th>Poliçeyi Oluşturan</th>     <!-- olusturan (gizli) -->
+          <th>Poliçeyi Kesen</th>         <!-- kesen (gizli) -->
+        </tr>
+      </thead>
+      <tbody class="small"></tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- 🔍 Gelişmiş Filtre Modalı -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-sm">
+      <div class="modal-header bg-light py-3 border-bottom">
+        <h5 class="modal-title text-dark fw-semibold" id="filterModalLabel">
+          <i class="bi bi-funnel-fill me-2 text-primary"></i> Gelişmiş Filtreleme
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+
+      <!-- ✅ Uyarı alanı -->
+      <div id="filter-warning" class="alert alert-warning m-3 py-2 px-3 d-none small" role="alert" style="font-size: 0.85rem;">
+        <!-- JS ile doldurulacak -->
+      </div>
+
+      <div class="modal-body py-3 pt-0">
+        <div class="row g-3">
+
+          <!-- Tarihler -->
+          <div class="col-md-6">
+            <label class="form-label small">Başlangıç Tarihi</label>
+            <input type="text" class="form-control form-control-sm" id="start-date" placeholder="gg.aa.yyyy">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Bitiş Tarihi</label>
+            <input type="text" class="form-control form-control-sm" id="end-date" placeholder="gg.aa.yyyy">
+          </div>
+
+          <!-- Şirket -->
+          <div class="col-md-6">
+            <label class="form-label small">Sigorta Şirketi</label>
+            <select id="company-id" class="form-select form-select-sm">
+              <option value="">Tümü</option>
+            </select>
+          </div>
+
+          <!-- Branş -->
+          <div class="col-md-6">
+            <label class="form-label small">Branş</label>
+            <select id="branch-name" class="form-select form-select-sm">
+              <option value="">Tümü</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer py-2 border-top">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-sm btn-primary" id="apply-advanced-filter">Filtrele</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 🌀 Yükleniyor Popup -->
+<div id="loading-modal" class="modal" tabindex="-1" style="background: rgba(0,0,0,0.2);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center py-4">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <div><strong>Poliçeler getiriliyor...</strong></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 🔽 Özel sağ tık menüsü -->
+<div id="custom-context-menu" class="dropdown-menu" style="position: absolute; display: none; z-index: 9999;">
+  <a class="dropdown-item" href="#">İncele</a>
+  <a class="dropdown-item" href="#">PDF Al</a>
+</div>
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="{% static 'js/utils_pdf.js' %}"></script>
+<!-- DataTables Buttons -->
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+
+<!-- Excel için JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+
+<script>
+  flatpickr("#start-date", {
+    dateFormat: "d.m.Y",
+    locale: "tr"
+  });
+  flatpickr("#end-date", {
+    dateFormat: "d.m.Y",
+    locale: "tr"
+  });
+
+  function showFilterWarning(message) {
+  const warningBox = document.getElementById("filter-warning");
+  warningBox.textContent = message;
+  warningBox.classList.remove("d-none");
+}
+
+function clearFilterWarning() {
+  const warningBox = document.getElementById("filter-warning");
+  warningBox.textContent = "";
+  warningBox.classList.add("d-none");
+}
+</script>
+
+<script>
+  $(document).ready(function () {
+    // 🟡 DataTable Tanımı
+    const table = $('#policy-table').DataTable({
+      ajax: {
+        url: '{% url "get_policy_list" %}',
+        dataSrc: 'data',
+        data: function (d) {
+          d.q = $('#policy-search-input').val();
+          d.start_date = $('#start-date').val();
+          d.end_date = $('#end-date').val();
+          d.company_id = $('#company-id').val();
+          d.branch_code = $('#branch-name').val();
+        }
+      },
+        columns: [
+          { data: 'aktif', title: 'Durum', render: function (data) {
+              return (data === "1" || data === 1)
+                ? `<span class="badge badge-aktif">Aktif</span>`
+                : `<span class="badge badge-iptal">İptal</span>`;
+            }
+          },
+          { data: 'police_tanzim', visible: false, title: 'Tanzim Tarihi' },
+          { data: 'baslangic', title: 'Başlangıç' },
+          { data: 'bitis', title: 'Bitiş' },
+          { data: 'police_no', title: 'Poliçe No' },
+          { data: 'zeyil', title: 'Zeyil' },
+          { data: 'yenileme', title: 'Yenileme' },
+          { data: 'zeyil_kodu', visible: false, title: 'Zeyil Kodu' },
+          { data: 'zeyil_adi', title: 'Zeyil Adı', render: function (data) {
+              if (!data) return '';
+              const text = data.length > 15 ? data.slice(0, 15) + '...' : data;
+              return `<span title="${data}">${text}</span>`;
+            }
+          },
+          { data: 'sigorta_ettiren_tc', title: 'S. Ettiren TC' },
+          { data: 'customer', title: 'Müşteri', render: function (data) {
+              if (!data) return '';
+              const text = data.length > 20 ? data.slice(0, 20) + '...' : data;
+              return `<span title="${data}">${text}</span>`;
+            }
+          },
+          { data: 'sigortali_tc', title: 'Sigortalı TC' },
+          { data: 'insured', title: 'Sigortalı', render: function (data) {
+              if (!data) return '';
+              const text = data.length > 20 ? data.slice(0, 20) + '...' : data;
+              return `<span title="${data}">${text}</span>`;
+            }
+          },
+          { data: 'plaka', title: 'Plaka' },
+          { data: 'company', title: 'Şirket' },
+          { data: 'product_code', title: 'Ürün Kodu' },
+          { data: 'branch', title: 'Branş' },
+          { data: 'user', title: 'Kullanıcı' },
+          { data: 'user_branch', title: 'Şube' },
+          { data: 'brut_prim', title: 'Brüt Prim (TL)' },
+          { data: 'net_prim', visible: false, title: 'Net Prim (TL)' },
+          { data: 'komisyon_prim', visible: false, title: 'Komisyon (TL)' },
+          { data: 'brut_prim_raw', visible: false, title: 'Brüt Prim' },
+          { data: 'net_prim_raw', visible: false, title: 'Net Prim' },
+          { data: 'komisyon_raw', visible: false, title: 'Komisyon' },
+          { data: 'doviz_kuru', visible: false, title: 'Döviz Kuru' },
+          { data: 'doviz_cinsi', visible: false, title: 'Döviz Cinsi' },
+          { data: 'olusturan', visible: false, title: 'Poliçeyi Oluşturan' },
+          { data: 'kesen', visible: false, title: 'Poliçeyi Kesen' }
+        ],
+
+        buttons: [
+          {
+            extend: 'excelHtml5',
+            title: 'Policeler',
+            text: 'Excel',
+            className: 'd-none',
+            exportOptions: {
+              columns: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28]  // ✅ görünmeyen alanlar dahil
+            }
+          }
+        ],
+
+      // ✅ Buttons desteği için dom yapısı değişti
+      dom: "rt<'d-flex justify-content-end mt-3 mb-2'p>",
+      order: [[1, 'desc']],
+      pageLength: 15,
+      responsive: true,
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+      }
+    });
+
+    // 🔍 Arama butonu
+    $('#policy-search-btn').on('click', function () {
+      table.ajax.reload();
+    });
+
+    // 🔍 Enter ile arama
+    $('#policy-search-input').on('keypress', function (e) {
+      if (e.which === 13) $('#policy-search-btn').click();
+    });
+
+    // 🟢 Gelişmiş Filtre Aç → Modal + seçenekleri getir
+    $('#open-advanced-filter').on('click', function () {
+      loadFilterOptions();
+      const modal = new bootstrap.Modal(document.getElementById("filterModal"));
+      modal.show();
+    });
+
+
+
+  const modalEl = document.getElementById("filterModal");
+  modalEl.addEventListener("hidden.bs.modal", () => {
+    document.querySelectorAll(".modal-backdrop").forEach(e => e.remove());
+    document.body.classList.remove("modal-open");
+    document.body.style.overflow = "";
+    document.body.style.paddingRight = "";
+    document.body.style.backdropFilter = "none";
+  });
+
+
+  // 🖱️ Sağ tık menüsü
+  const menu = $('#custom-context-menu');
+  let selectedRowData = null;
+
+  $('#policy-table tbody').on('contextmenu', 'tr', function (e) {
+    e.preventDefault();
+    selectedRowData = $('#policy-table').DataTable().row(this).data();
+
+    menu.css({
+      top: e.pageY + 'px',
+      left: e.pageX + 'px',
+      display: 'block'
+    });
+  });
+
+  // Menü seçenekleri
+  menu.find('.dropdown-item').off('click').on('click', function () {
+    const action = $(this).text();
+    if (!selectedRowData) return;
+
+    if (action === 'İncele') {
+      const uuid = selectedRowData.uuid;
+      if (!uuid) {
+        showGlobalModalPopup("Poliçe UUID bilgisi eksik!", { type: "warning" });
+        return;
+      }
+
+      const detailUrl = `/database/policy/${uuid}/`;  // ✅ uygulama bazlı
+      window.open(detailUrl, '_blank');
+    }
+
+    if (action === 'PDF Al') {
+      const serviceId = selectedRowData.pdf_service_id;
+      if (!serviceId) {
+        showGlobalModalPopup("PDF servisi tanımlı değil!", { type: "warning" });
+        return;
+      }
+
+      const params = {
+        policy_number: selectedRowData.police_no,
+        endorsement_number: selectedRowData.zeyil || "0",
+        renewal_number: selectedRowData.yenileme || "0",
+        pdf_type: "police",
+        agency_code: selectedRowData.agency_code || "",
+        product_code: selectedRowData.product_code || "",
+        branch_code: selectedRowData.branch_code || ""
+      };
+
+        console.log("📦 PDF Gönderilen Params:", params);
+
+
+      requestPolicyPDF(serviceId, params);
+    }
+
+    menu.hide();
+  });
+
+
+  // Menü dışına tıklanınca kapat
+  $(document).on('click', function () {
+    menu.hide();
+  });
+
+
+
+  // 🖱️ Mouse ile sürükleyerek scroll
+  const container = document.getElementById("scroll-container");
+  let isDragging = false;
+  let startX, scrollLeft;
+
+  container.addEventListener("mousedown", function (e) {
+    if (e.target.closest("td") || window.getSelection().toString()) return;
+    isDragging = true;
+    container.classList.add("scrolling");
+    startX = e.pageX - container.offsetLeft;
+    scrollLeft = container.scrollLeft;
+  });
+
+  container.addEventListener("mouseleave", () => {
+    isDragging = false;
+    container.classList.remove("scrolling");
+  });
+
+  container.addEventListener("mouseup", () => {
+    isDragging = false;
+    container.classList.remove("scrolling");
+  });
+
+  container.addEventListener("mousemove", function (e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const walk = x - startX;
+    container.scrollLeft = scrollLeft - walk;
+  });
+});
+</script>
+
+<script>
+  function loadFilterOptions() {
+    fetch("/database/api/filter-options/")
+      .then(res => res.json())
+      .then(data => {
+        const companySelect = document.getElementById("company-id");
+        const branchSelect = document.getElementById("branch-name");
+
+        companySelect.innerHTML = '<option value="">Tümü</option>';
+        branchSelect.innerHTML = '<option value="">Tümü</option>';
+
+        data.companies.forEach(c => {
+          companySelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+
+        data.branches.forEach(b => {
+          branchSelect.innerHTML += `<option value="${b.id}">${b.name}</option>`;
+        });
+      });
+  }
+
+document.getElementById("apply-advanced-filter").addEventListener("click", function () {
+  const startDate = document.getElementById("start-date").value.trim();
+  const endDate = document.getElementById("end-date").value.trim();
+  const companyId = document.getElementById("company-id").value;
+  const branchId = document.getElementById("branch-name").value;
+
+  const warningEl = document.getElementById("filter-warning");
+  warningEl.classList.add("d-none");
+  warningEl.innerHTML = "";
+
+  if (!startDate || !endDate) {
+    warningEl.innerHTML = "Lütfen başlangıç ve bitiş tarihlerini seçiniz.";
+    warningEl.classList.remove("d-none");
+    return;
+  }
+
+  // ✅ Modalı kapat
+  bootstrap.Modal.getInstance(document.getElementById("filterModal")).hide();
+
+  // ✅ Arama kutusunu temizle
+  document.getElementById("policy-search-input").value = "";
+
+  const table = $('#policy-table').DataTable();
+
+  // ✅ Arama filtresini sıfırla
+  table.search("").draw();
+
+  // ✅ Filtre parametrelerini güncelle
+  table.ajax.params({
+    q: '',
+    start_date: startDate,
+    end_date: endDate,
+    company_id: companyId,
+    branch_id: branchId,
+  });
+
+  // 🌀 Popup göster
+  showGlobalModalPopup("Poliçeler getiriliyor, lütfen bekleyiniz...", {
+    type: "info",
+    autoClose: false,
+  });
+
+  // 🔁 Tabloyu güncelle, popup'ı kapat
+  table.ajax.reload(() => {
+    closeGlobalPopup();
+    setTimeout(() => closeGlobalPopup(), 3000); // Yedek kapanış
+  });
+});
+
+
+  function setDefaultDateRange() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const formatDate = (d) => d.toLocaleDateString("tr-TR").padStart(10, "0");
+
+  document.getElementById("start-date").value = formatDate(firstDay);
+  document.getElementById("end-date").value = formatDate(lastDay);
+}
+
+  // Modal açıldığında tarihleri yükle
+  document.getElementById("open-advanced-filter").addEventListener("click", function () {
+    setDefaultDateRange();
+    const modal = new bootstrap.Modal(document.getElementById("filterModal"));
+    modal.show();
+  });
+
+
+</script>
+
+<script>
+  // Excel butonuna tıklanınca çalışacak
+document.getElementById("excel-export-btn").addEventListener("click", function () {
+  const table = $('#policy-table').DataTable();
+
+  // 🔒 Tabloda veri yoksa uyarı ver
+  if (!table.data().any()) {
+    showGlobalModalPopup("Tabloda dışarı aktarılacak veri bulunamadı!", {
+      type: "warning",
+      autoClose: 3000,
+    });
+    return;
+  }
+
+  // ✅ Başlatıldı uyarısı ver
+  showGlobalModalPopup("Excel aktarımı hazırlanıyor...", {
+    type: "info",
+    autoClose: 2000
+  });
+
+  // ⏬ DataTable içindeki button'u tetikle
+  table.button('.buttons-excel').trigger();
+});
+
+</script>
+
+{% endblock %}

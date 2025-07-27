@@ -1,0 +1,15 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:GetPolicyReportAuthenticationKey>
+      <tem:authenticationKey>kN631Bl8QxfzJhtaSSSdk27pMu0fYVc5EaLrgSVRjJpOZvN0T52OGl5pYHeh9CEBs+HT3w21jHz0hEoH7SeBVbxdh5g5OmyMLRXlyMr4udzbDVUKdn397nOBNHQJk4RegZySSrqoddluDVF0cvDQBNFgt2NKlu8AoeBBWpoKk9q0U7WALAuTe55V3Iv4zqULLlaQlmdvB91YzKh/Eb8Dn01eCcTpL8u7m4lcHSzX3CU/0rt0KtLEUGUbO/NqeFKpQM9pBzdzbwJu1j03sfDyTFU9OJjdkwBECMij1nj4NOpFVr3CKf0ThCtn0oYhRIWcHcptxH7vqWK0U7WALAuTe/vWM1UVWfN6pM6PkgjrpYgXoOTd7gqnQ2tmrzA8B1BLEp2yICxvYu/mcgrcnH/IncDiQ46A2IMM+n/NSklXd8BgeC2MX7Uc85tAngEnXDYWvYEy+fCtU7RGF9foROzo5zryYrtrKJ0aE6pIwjIHXoRtY5q0JhkOyvoUzcJaX/fQz077mGUe9Lp2IZmCY2n1V/NL7upMdX9kUPa1hsdhcxvVMqm5gjLUnZwg3iDwMLQuRCvTQoAKXFpMVTuiVLP/ajW5dfF8h876q0OH6HOEgrtd6h8A4VlOMpJK6a6UdD1v68+WIkoLz2dIJ+W5+e7l5SSMqtp9lUvxeoDMWdLb/i/3QYjLydoJfFtPG/Ox1rgsWINkoUNmdRTAOJbWqk+qAAZSF6tzXeEvOINCuuRxsR/yxHg9G0xL+VM0lzN998/Q3EkNVvSyGYSEVJW0MI59hu8T6BGrNhEYo+n1/aVMw6cSIe99WB2vphZyEiA7babWzim/IlA62/4MBRY+byVHEqG8cGmg1pdcfaw/Avu6mmLM4q8OD1tUSp+SGvdpg9Mv1BtLLXabwRQA6ppf53+XV5Fh8VBe+A5Ja0eWhuyonmzmXxokrBibfQkxV/AB2WwrIrGZimiSFE6KzAFfM/pKrdjoTkSME2hl/lvYc+Fk4iIItBJtYRRgaOnzl25ACBQuyWMIlRfRWoB98r3fM2xtLpXcwh6djlolOrognTerI5VYg2ShQ2Z1FGGCNWkdQHFw8ubh+YxwY4dWZ6An6WfnNnVE/YMXjf+7S/AAMBKk+gxqpNK9LnWAK7ACNCgocEJD7JDuQOm5HWb/5R1JnzIBH7Q4urMftla43nVNYSPvELBr4vHC6oqmSixBqLWsaK8M37kVpFz6iHssJ7tQ8x7J+bx28THA4mVWKCdmw6tUAb7OScTH2BcLWt55DHEWbULFmEHKV+ZFDsjIFf1sxMiVWu3BosxvpPbot51J7TuDfmBwbIbuZ8ERizzN5eAQ27HLZu8I8hHu/Wg=</tem:authenticationKey>
+      <tem:policyNo>92598223</tem:policyNo>
+      <tem:supplementNo>0</tem:supplementNo>
+      <tem:generateNotification>0</tem:generateNotification>
+      <tem:userName>C.GUROGLU</tem:userName>
+      <tem:oldPolicyNo></tem:oldPolicyNo>
+      <tem:logo></tem:logo>
+      <tem:language>tr-TR</tem:language>
+    </tem:GetPolicyReportAuthenticationKey>
+  </soapenv:Body>
+</soapenv:Envelope>

@@ -1,0 +1,582 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  /* 🔵 Edit Butonu – #3057c7 */
+  .btn-blue {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    color: #fff !important;
+  }
+  .btn-blue:hover {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    opacity: 0.9;
+  }
+
+  /* 🔴 Template Butonu – #dc4a41 */
+  .btn-red {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: #fff !important;
+  }
+  .btn-red:hover {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    opacity: 0.9;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+   /* 📌 Modal Genel */
+  .modal-content {
+    border-radius: 0.75rem;
+    border: none;
+    background-color: #ffffff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-dialog.modal-xxl {
+    max-width: 90%;
+  }
+
+  .modal-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: #212529;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    color: #212529;
+    font-size: 14px;
+  }
+
+  .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
+  }
+
+  /* 🧾 Şablon textarea alanı */
+  .template-editor {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    height: 500px;
+    resize: vertical;
+  }
+
+  /* 🟧 Turuncu Kaydet Butonu */
+  .btn-save-orange {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.4rem;
+  }
+
+    .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  .modal-title {
+    font-size: 18px;
+  }
+
+
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+}
+
+ .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+
+</style>
+
+
+<div class="container mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Teklif Servisleri</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm" onclick="openAddModal()">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Servis
+    </button>
+  </div>
+
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Servis ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive px-2">
+        <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+          <thead class="text-white" style="background-color: #7951aa;">
+            <tr>
+              <th>ID</th>
+              <th>Sigorta Şirketi</th>
+              <th>Servis Adı</th>
+              <th>Ürün Kodu</th>
+              <th>Alt Kodu</th>
+              <th>Paket</th>
+              <th>SOAP Action</th>
+              <th class="text-center">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for service in page_obj %}
+            <tr>
+              <td>{{ service.id }}</td>
+              <td>{{ service.insurance_company.name }}</td>
+              <td>{{ service.service_name }}</td>
+              <td>{{ service.product_code }}</td>
+              <td>{{ service.sub_product_code }}</td>
+              <td>{{ service.sub_product_description }}</td>
+              <td>{{ service.soap_action|truncatechars:50 }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-blue" onclick="editService({{ service.id }})">Edit</button>
+                <button class="btn btn-sm btn-red" onclick="editTemplate({{ service.id }})">Template</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-4">Servis bulunamadı.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a>
+      </li>
+      {% endif %}
+      {% for num in page_range %}
+      {% if num == '...' %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+      <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+        <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="serviceModal" tabindex="-1">
+  <div class="modal-dialog modal-md"> <!-- Daha dar ve şık görünüm -->
+    <div class="modal-content rounded-3 shadow-sm">
+      <form id="serviceForm">
+        <!-- Başlık -->
+        <div class="modal-header bg-light border-bottom">
+          <h5 class="modal-title text-dark fw-bold">Teklif Servisi Ekle / Düzenle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <!-- Gövde -->
+        <div class="modal-body">
+          <input type="hidden" id="service_id">
+
+          <div class="mb-3">
+            <label class="form-label">Sigorta Şirketi</label>
+            <select class="form-select" id="insurance_company" required></select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Servis Adı</label>
+            <input type="text" class="form-control" id="service_name" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Ürün Kodu</label>
+            <select class="form-select" id="product_code" required></select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Alt Ürün Kodu</label>
+            <input type="text" class="form-control" id="sub_product_code">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Alt Ürün Açıklaması</label>
+            <input type="text" class="form-control" id="sub_product_description">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">URL</label>
+            <input type="text" class="form-control" id="url" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">SOAP Action</label>
+            <input type="text" class="form-control" id="soap_action" required>
+          </div>
+        </div>
+
+        <!-- Alt Butonlar -->
+        <div class="modal-footer bg-white">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+          <button type="submit" class="btn btn-danger text-white">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Template Modal -->
+<div class="modal fade" id="soapTemplateModal" tabindex="-1">
+  <div class="modal-dialog modal-xxl">
+    <div class="modal-content">
+      <form id="soapTemplateForm">
+        <div class="modal-header">
+          <h5 class="modal-title">SOAP Şablonunu Düzenle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+          <div class="modal-body">
+            <input type="hidden" id="template_service_id">
+
+            <label class="form-label">SOAP Template</label>
+            <textarea id="soap_template" class="form-control template-editor mb-3"></textarea>
+
+            <label class="form-label">Request Template</label>
+            <textarea id="request_template" class="form-control template-editor"></textarea>
+          </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-save-orange">
+            <i class="bi bi-save me-1"></i> Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const API_SERVICES = '/database/offer-services/';
+const API_COMPANIES = '/database/api/companies/';
+const API_BRANCHES = '/database/api/policy-branches/';
+
+let companies = [];
+
+// ✅ CSRF Cookie Al
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ✅ Şirketleri Getir ve Select'e Yaz
+async function fetchCompanies(selected = null) {
+    const response = await fetch(API_COMPANIES);
+    companies = await response.json();
+    const select = document.getElementById("insurance_company");
+    select.innerHTML = companies.map(c =>
+        `<option value="${c.id}" ${selected == c.id ? 'selected' : ''}>${c.name}</option>`
+    ).join("");
+}
+
+// ✅ Poliçe Branşlarını Getir ve Select'e Yaz
+async function fetchBranches(selected = null) {
+    const response = await fetch(API_BRANCHES);
+    const branches = await response.json();
+    const select = document.getElementById("product_code");
+    select.innerHTML = branches.map(b =>
+        `<option value="${b.id}" ${selected == b.id ? 'selected' : ''}>${b.label}</option>`
+    ).join("");
+}
+
+// ✅ Teklif Servislerini Listele
+async function fetchServices() {
+    const response = await fetch(API_SERVICES);
+    const data = await response.json();
+    const tbody = document.querySelector("#serviceTableFull tbody");
+    const rows = data.map(service => {
+        return `
+        <tr>
+            <td>${service.id}</td>
+            <td>${companies.find(c => c.id == service.insurance_company)?.name ?? ''}</td>
+            <td>${service.service_name}</td>
+            <td>${service.product_code}</td>
+            <td>${service.soap_action?.slice(0, 50)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-blue" onclick="editService(${service.id})">Edit</button>
+                <button class="btn btn-sm btn-red" onclick="editTemplate(${service.id})">Template</button>
+            </td>
+        </tr>`;
+    }).join("");
+
+    tbody.innerHTML = rows;
+
+    if ($.fn.DataTable.isDataTable("#serviceTableFull")) {
+        $('#serviceTableFull').DataTable().destroy();
+    }
+
+    $('#serviceTableFull').DataTable({
+        pageLength: 12
+    });
+}
+
+// ✅ Modalı Aç ve Temizle
+function openAddModal() {
+    document.getElementById("serviceForm").reset();
+    document.getElementById("service_id").value = "";
+    fetchCompanies();
+    fetchBranches();
+    const modal = new bootstrap.Modal(document.getElementById("serviceModal"));
+    modal.show();
+}
+
+// ✅ Servis Detaylarını Getir ve Doldur
+async function editService(id) {
+    const response = await fetch(`${API_SERVICES}${id}/`);
+    const data = await response.json();
+
+    document.getElementById("service_id").value = data.id;
+    document.getElementById("service_name").value = data.service_name;
+    document.getElementById("sub_product_code").value = data.sub_product_code || "";
+    document.getElementById("sub_product_description").value = data.sub_product_description || "";
+    document.getElementById("url").value = data.url;
+    document.getElementById("soap_action").value = data.soap_action;
+
+    await fetchCompanies(data.insurance_company);
+    await fetchBranches(data.product_code);
+
+    const modal = new bootstrap.Modal(document.getElementById("serviceModal"));
+    modal.show();
+}
+
+// ✅ SOAP Template Modalını Aç
+async function editTemplate(id) {
+    const response = await fetch(`${API_SERVICES}${id}/`);
+    const data = await response.json();
+
+    document.getElementById("template_service_id").value = data.id;
+    document.getElementById("soap_template").value = data.soap_template?.trim() || "";
+    document.getElementById("request_template").value = data.request_template?.trim() || "";
+
+    const modal = new bootstrap.Modal(document.getElementById("soapTemplateModal"));
+    modal.show();
+}
+
+
+// ✅ Servis Kaydet (YENİ veya GÜNCELLE)
+document.getElementById("serviceForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const id = document.getElementById("service_id").value;
+    let method, url;
+    if (id) {
+        // Güncelleme (PUT)
+        method = "PUT";
+        url = `${API_SERVICES}${id}/update/`;
+    } else {
+        // Yeni kayıt (POST)
+        method = "POST";
+        url = `${API_SERVICES}create/`;
+    }
+
+    const data = {
+        insurance_company: document.getElementById("insurance_company").value,
+        service_name: document.getElementById("service_name").value,
+        product_code: document.getElementById("product_code").value,
+        sub_product_code: document.getElementById("sub_product_code").value,
+        sub_product_description: document.getElementById("sub_product_description").value,
+        url: document.getElementById("url").value,
+        soap_action: document.getElementById("soap_action").value
+    };
+
+    const response = await fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+        bootstrap.Modal.getInstance(document.getElementById("serviceModal")).hide();
+        location.reload();
+    }
+});
+
+// ✅ SOAP Template Kaydet (SADECE TEMPLATE PATCH EDER)
+document.getElementById("soapTemplateForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const id = document.getElementById("template_service_id").value;
+    const soap_template = document.getElementById("soap_template").value;
+    const request_template = document.getElementById("request_template").value;
+
+    const response = await fetch(`${API_SERVICES}${id}/template/`, {
+        method: "PATCH",
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            soap_template: soap_template,
+            request_template: request_template
+        })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+        bootstrap.Modal.getInstance(document.getElementById("soapTemplateModal")).hide();
+        fetchServices();
+    }
+});
+
+
+// ✅ Sayfa Yüklendiğinde
+document.addEventListener("DOMContentLoaded", function () {
+    fetchCompanies().then(() => fetchServices());
+});
+
+</script>
+<script>
+  // Enter tuşuna basıldığında ara
+  document.getElementById("searchBox").addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const query = this.value.trim();
+      const url = new URL(window.location.href);
+      url.searchParams.set('q', query);
+      url.searchParams.delete('page'); // Sayfa numarasını sıfırla
+      window.location.href = url.toString();
+    }
+  });
+
+  // Temizleme butonuna tıklanırsa arama sıfırlansın
+  function clearSearch() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('q');
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+  }
+</script>
+
+{% endblock %}

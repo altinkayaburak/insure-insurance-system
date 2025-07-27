@@ -1,0 +1,77 @@
+
+.form-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.form-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.form-icon img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+    height: auto;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
+}
+
+.btn-primary {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.icon-circle {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+#sigortaEttirenFields {
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+.sigorta-ettiren-toggle {
+  background-color: #e9ecef;
+  border-color: #ccc;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.sigorta-ettiren-toggle:checked {
+  background-color: #e1b45f !important;  /* turuncu */
+  border-color: #e1b45f !important;
+}

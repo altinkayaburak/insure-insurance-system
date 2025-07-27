@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-5">
+
+  <!-- 🔼 Başlık ve Buton -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Parametreler</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addParameterModal">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Parametre
+    </button>
+  </div>
+
+  <!-- 🔍 Arama -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Parametre ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- 📋 Parametre Tablosu -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive px-2">
+        <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+          <thead class="text-white" style="background-color: #7951aa;">
+            <tr>
+              <th class="ps-3">#</th>
+              <th>Parametre Adı</th>
+              <th>Varsayılan Değer</th>
+              <th>Oluşturulma</th>
+              <th class="text-center pe-3">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for param in page_obj %}
+            <tr>
+              <td class="ps-3 text-muted small">{{ param.ParameterID }}</td>
+              <td class="fw-medium">{{ param.ParameterName }}</td>
+              <td class="text-muted small">{{ param.DefaultValue }}</td>
+              <td class="text-muted small">{{ param.CreatedDate|date:"d.m.Y H:i" }}</td>
+              <td class="text-center pe-3">
+                <button class="btn btn-sm btn-light edit-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editParameterModal"
+                        data-id="{{ param.ParameterID }}"
+                        data-name="{{ param.ParameterName }}"
+                        data-default="{{ param.DefaultValue }}">
+                  <i class="bi bi-pencil text-danger"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Hiç parametre bulunamadı.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔽 Sayfalama -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a></li>
+      {% endif %}
+      {% for num in page_range %}
+        {% if num == '...' %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% else %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ✅ Yeni Parametre Ekle Modal -->
+<div id="addParameterModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header text-black">
+                <h5 class="modal-title">Yeni Parametre Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addParameterForm">
+                    {% csrf_token %}
+
+                    <!-- Key Arama Alanı -->
+                    <div class="mb-3">
+                        <label class="form-label">Anahtar Seçin</label>
+                        <input type="text" class="form-control" id="keySearch" placeholder="Anahtar ara...">
+                        <ul id="keySearchResults" class="list-group mt-2"></ul>
+                        <input type="hidden" id="selectedKeyID" name="KeyID">
+                    </div>
+
+                    <!-- Parametre Inputları -->
+                    <div id="parameterInputs">
+                        <div class="row mb-3 parameter-row">
+                            <div class="col">
+                                <label class="form-label">Parametre Adı</label>
+                                <input type="text" class="form-control parameter-name" name="ParameterName[]" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Varsayılan Değer</label>
+                                <input type="text" class="form-control parameter-value" name="DefaultValue[]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Yeni Parametre Ekle Butonu -->
+                    <button type="button" class="btn btn-outline-primary mb-3" id="addMoreParameters">
+                        <i class="bi bi-plus-lg me-1"></i> Yeni Parametre Ekle
+                    </button>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="submitParameters()">Kaydet</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Düzenleme Modal -->
+<div id="editParameterModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Parametre Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editParameterForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="editParameterID" name="ParameterID">
+
+                    <div class="mb-3">
+                        <label class="form-label">Parametre Adı</label>
+                        <input type="text" class="form-control" id="editParameterName" name="ParameterName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Varsayılan Değer</label>
+                        <input type="text" class="form-control" id="editDefaultValue" name="DefaultValue">
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="updateParameter()">Güncelle</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Stil -->
+<style>
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table-responsive {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+</style>
+
+
+
+<script>
+// ✅ Enter tuşuna basınca arama yap
+document.getElementById('searchBox').addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchParameters();
+    }
+});
+
+// ✅ Arama Fonksiyonu
+function searchParameters() {
+    let query = document.getElementById('searchBox').value.trim();
+    if (query !== "") {
+        window.location.href = "?q=" + encodeURIComponent(query);
+    } else {
+        clearSearch();
+    }
+}
+
+// ✅ Temizleme Butonu
+function clearSearch() {
+    window.location.href = window.location.pathname;
+}
+</script>
+
+<script>
+
+    // ✅ Key Arama (AJAX)
+document.getElementById('keySearch').addEventListener('input', function () {
+    const query = this.value.trim();
+    if (query.length < 2) {
+        document.getElementById('keySearchResults').innerHTML = '';
+        return;
+    }
+
+    fetch(`/database/search-keys/?q=${query}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsList = document.getElementById('keySearchResults');
+            resultsList.innerHTML = '';
+            data.keys.forEach(key => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('list-group-item');
+                listItem.textContent = `${key.KeyName} (ID: ${key.KeyID})`;
+                listItem.setAttribute('data-id', key.KeyID);
+                listItem.addEventListener('click', function () {
+                    document.getElementById('selectedKeyID').value = this.getAttribute('data-id');
+                    document.getElementById('keySearch').value = this.textContent;
+                    resultsList.innerHTML = '';
+                });
+                resultsList.appendChild(listItem);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+});
+
+    // ✅ Yeni Parametre Inputu Açma
+document.getElementById('addMoreParameters').addEventListener('click', function () {
+    const parameterInputs = document.getElementById('parameterInputs');
+    const newRow = document.createElement('div');
+    newRow.classList.add('row', 'mb-3', 'parameter-row');
+    newRow.innerHTML = `
+        <div class="col">
+            <label class="form-label">Parametre Adı</label>
+            <input type="text" class="form-control parameter-name" name="ParameterName[]" required>
+        </div>
+        <div class="col">
+            <label class="form-label">Varsayılan Değer</label>
+            <input type="text" class="form-control parameter-value" name="DefaultValue[]">
+        </div>`;
+    parameterInputs.appendChild(newRow);
+});
+
+    // ✅ Edit Modal'ı Açma ve DB'den Veri Doldurma
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const parameterID = this.getAttribute('data-id');
+            const parameterName = this.getAttribute('data-name');
+            const defaultValue = this.getAttribute('data-default');
+
+            document.getElementById('editParameterID').value = parameterID;
+            document.getElementById('editParameterName').value = parameterName;
+            document.getElementById('editDefaultValue').value = defaultValue;
+        });
+    });
+
+    // ✅ Parametre Güncelleme Fonksiyonu
+function submitParameters() {
+    const form = document.getElementById('addParameterForm');
+    const formData = new FormData(form);
+
+    // Mutlaka root'tan başlasın, hangi sayfadaysan ona göre düzelt:
+    fetch('/database/parameters/add/', {  // veya '/parameters/add/' kullanabilirsin, URL yapına göre!
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Parametre başarıyla eklendi!');
+            location.reload();
+        } else {
+            alert(data.error || 'Bir hata oluştu!');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Sunucu hatası! Lütfen tekrar deneyin.');
+    });
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,356 @@
+{% load static %}
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    html, body {
+        height: 100%;
+        width: 100%;
+        background: #f9f9f9;
+    }
+
+    body {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding-right: 15%;
+
+    }
+
+    .container {
+        width: 450px;
+        height: auto;
+        min-height: 720px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+    }
+
+    .wrapper {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .wrapper .title-text {
+        display: flex;
+        width: 100%;
+    }
+
+    .wrapper .title {
+        width: 100%;
+        font-size: 42px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 10px;
+        color: #291f69;
+    }
+
+    .slide-controls {
+        position: relative;
+        display: flex;
+        height: 50px;
+        width: 100%;
+        margin: 30px 0 10px 0;
+        justify-content: space-between;
+        border: 1px solid #e0e0e0;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .slide-controls .slide {
+        width: 100%;
+        color: #333;
+        font-size: 18px;
+        font-weight: 500;
+        text-align: center;
+        line-height: 48px;
+        cursor: pointer;
+        z-index: 1;
+    }
+
+    .slider-tab {
+        position: absolute;
+        height: 100%;
+        width: 50%;
+        left: 0;
+        z-index: 0;
+        border-radius: 15px;
+        background: #291f69;
+        transition: all 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+    }
+
+    input[type="radio"] {
+        display: none;
+    }
+
+    #signup:checked ~ .slider-tab {
+        left: 50%;
+    }
+
+    #signup:checked ~ label.signup {
+        color: #fff;
+    }
+
+    #signup:checked ~ label.login {
+        color: #333;
+    }
+
+    #login:checked ~ label.signup {
+        color: #333;
+    }
+
+    #login:checked ~ label.login {
+        color: #fff;
+    }
+
+    .form-container {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .form-inner {
+        display: flex;
+        width: 200%;
+    }
+
+    .form-inner form {
+        width: 50%;
+        transition: all 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+    }
+
+    .form-inner form .field {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .form-inner form .field input {
+        height: 50px;
+        width: 100%;
+        padding-left: 15px;
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        font-size: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-inner form .field input:focus {
+        border-color: #291f69;
+        box-shadow: 0 0 0 3px rgba(41, 31, 105, 0.1);
+        outline: none;
+    }
+
+    .form-inner form .pass-link,
+    .form-inner form .signup-link {
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .form-inner form .pass-link a,
+    .form-inner form .signup-link a {
+        color: #291f69;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    form .btn {
+        height: 50px;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 20px;
+    }
+
+    .btn input[type="submit"] {
+        background: #291f69;
+        height: 100%;
+        width: 100%;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn input[type="submit"]:hover {
+        background: #1e174d;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(41, 31, 105, 0.2);
+    }
+
+    /* OTP Alanı Güncellemeleri */
+    #otp-field {
+        display: none;
+        margin-top: 25px;
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    #otp-field input {
+        border: 1px solid #e0e0e0 !important;
+        box-shadow: none !important;
+    }
+
+    .otp-note {
+        font-size: 13px;
+        color: #666;
+        margin-top: 8px;
+        font-style: italic;
+        display: block;
+    }
+
+    /* Mesaj Alanı Güncellemeleri */
+    #loginMessage {
+        margin: 20px 0;
+        padding: 12px 15px;
+        border-radius: 10px;
+        font-weight: 500;
+        text-align: center;
+        display: none;
+    }
+
+    .message-success {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+
+    .message-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+        body {
+            justify-content: center;
+            padding-right: 0;
+        }
+
+        .container {
+            width: 90%;
+            padding: 30px;
+        }
+    }
+</style>
+
+<body>
+<div class="container">
+    <div class="wrapper">
+        <div class="title-text">
+            <div class="title login">INSURE</div>
+        </div>
+        <div class="form-container">
+            <div class="slide-controls">
+                <input type="radio" name="slide" id="login" checked>
+                <input type="radio" name="slide" id="signup">
+                <label for="login" class="slide login">Giriş</label>
+                <label for="signup" class="slide signup">Kayıt</label>
+                <div class="slider-tab"></div>
+            </div>
+            <div class="form-inner">
+                <form action="{% url 'login' %}" method="post" class="login" id="loginForm">
+                    {% csrf_token %}
+                    <div class="field">
+                        <input type="text" name="username" id="username" placeholder="Kullanıcı Adı" required>
+                    </div>
+                    <div class="field">
+                        <input type="password" name="password" id="password" placeholder="Şifre" required>
+                    </div>
+                    <div class="field" id="otp-field" style="display:none;">
+                        <input type="text" name="otp" id="otp" placeholder="OTP Kodu (e-posta)" maxlength="6">
+                        <span class="otp-note">OTP kodu e-posta adresinize gönderilmiştir.</span>
+                    </div>
+                    <div class="pass-link">
+                        <a href="{% url 'forgot_password' %}">Şifremi Unuttum</a>
+                    </div>
+                    <div class="field btn">
+                        <input type="submit" value="Giriş Yap" id="loginButton">
+                    </div>
+                    <div id="loginMessage"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const otp = document.getElementById("otp").value;
+        const otpField = document.getElementById("otp-field");
+        const loginMessage = document.getElementById("loginMessage");
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        let step = otpField.style.display === "none" ? "otp_send" : "otp_verify";
+
+        // 🟢 KULLANICIYA BEKLETMEDEN OTP ALANINI GÖSTER
+        if (step === "otp_send") {
+            otpField.style.display = "block";
+            showOtpPopup("✉️ OTP kodu e-posta adresinize gönderiliyor, lütfen giriniz...", "success");
+        }
+
+        fetch("{% url 'login' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({
+                step: step,
+                username: username,
+                password: password,
+                otp: otp
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.redirect) {
+                window.location.href = data.redirect;
+                return;
+            }
+            if (data.success) {
+                if (step === "otp_verify") {
+                    window.location.href = data.redirect;
+                }
+            } else {
+                showOtpPopup("⛔ " + data.message, "danger");
+            }
+        })
+        .catch(error => {
+            showOtpPopup("⚠ Bir hata oluştu: " + error, "danger");
+        });
+    });
+
+    // ✅ Geri bildirim gösterici
+    function showOtpPopup(message, type) {
+        const msgDiv = document.getElementById("loginMessage");
+        msgDiv.innerText = message;
+        msgDiv.className = type === "success" ? "message-success" : "message-danger";
+        msgDiv.style.display = "block";
+
+        // 5 saniye sonra mesajı gizle
+        setTimeout(() => {
+            msgDiv.style.display = "none";
+        }, 5000);
+    }
+</script>
+</body>
+</html>

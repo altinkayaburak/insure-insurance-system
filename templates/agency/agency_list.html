@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- ✅ CSS -->
+<style>
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+
+  .page-item.active .page-link {
+    background-color: #291f69;
+    color: white;
+    border-color: #291f69;
+  }
+
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .table-responsive {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  .card-body {
+    padding: 1rem !important;
+  }
+</style>
+
+<div class="container mt-5">
+  <!-- Sayfa Başlığı ve Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Acenteler</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm"
+            data-bs-toggle="modal" data-bs-target="#addAgencyModal">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Acente Ekle
+    </button>
+  </div>
+
+  <!-- Arama Kutusu -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Acente ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Acente Tablosu -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive px-2">
+        <table class="table table-hover table-bordered align-middle" style="font-size: 14px;">
+          <thead class="text-white" style="background-color: #291f69;">
+            <tr>
+              <th class="ps-3">#</th>
+              <th>Ad</th>
+              <th>Domain</th>
+              <th>Durum</th>
+              <th class="text-center pe-3">Git</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for agency in page_obj %}
+            <tr>
+              <td class="ps-3 text-muted small">{{ agency.id }}</td>
+              <td class="fw-medium">{{ agency.name }}</td>
+              <td class="text-muted small">{{ agency.domain }}</td>
+              <td>
+                {% if agency.is_active %}
+                  <span class="badge bg-status-active">Aktif</span>
+                {% else %}
+                  <span class="badge bg-status-passive">Pasif</span>
+                {% endif %}
+              </td>
+              <td class="text-center pe-3">
+                <a href="{% url 'agency_detail' agency.id %}" class="text-decoration-none text-danger" title="Detaya Git">
+                  <i class="bi bi-box-arrow-up-right fs-5"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Acente bulunamadı.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sayfalama -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a></li>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+        </li>
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Tek Modal: Yeni Acente -->
+<div class="modal fade" id="addAgencyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-white rounded-3 shadow-sm" style="border: none;">
+      <form id="addAgencyForm" autocomplete="off">
+        {% csrf_token %}
+
+        <!-- Modal Başlık -->
+        <div class="modal-header border-0 bg-white">
+          <h5 class="modal-title fw-bold text-dark">Yeni Acente Ekle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <!-- Modal İçerik -->
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Acente Adı</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Domain</label>
+            <input type="text" name="domain" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Durum</label>
+            <select class="form-select" name="is_active">
+              <option value="true">Aktif</option>
+              <option value="false">Pasif</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer border-0 bg-white">
+          <button class="btn btn-light border" data-bs-dismiss="modal">İptal</button>
+          <button type="submit" class="btn" style="background: #291f69; color: #fff;">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- ✅ JS -->
+<script>
+  document.getElementById("searchBox").addEventListener("keypress", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const query = this.value.trim();
+      if (query !== "") {
+        window.location.href = "?q=" + encodeURIComponent(query);
+      } else {
+        window.location.href = window.location.pathname;
+      }
+    }
+  });
+
+  function clearSearch() {
+    document.getElementById("searchBox").value = "";
+    window.location.href = window.location.pathname;
+  }
+
+  function submitAgencyForm() {
+    const form = document.getElementById("addAgencyForm");
+    const formData = new FormData(form);
+
+    fetch("/agency/add/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) location.reload();
+      else alert("Hata oluştu!");
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Sunucu hatası!");
+    });
+  }
+</script>
+
+
+
+{% endblock %}

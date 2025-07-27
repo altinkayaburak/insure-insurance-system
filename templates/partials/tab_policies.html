@@ -1,0 +1,125 @@
+
+{% load custom_tags %}
+
+<style>
+.pagination .page-link {
+  background-color: #fffff;
+  color: #d64a42;
+  border: none;
+  margin: 0 2px;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #d64a42;
+  color: white;
+  border: none;
+}
+
+.pagination .page-link:hover {
+  background-color: #f8d7da;
+  color: #d64a42;
+}
+</style>
+
+<!-- 🔼 Poliçe Ekle Butonu -->
+<div class="d-flex justify-content-end mb-3">
+  <button class="btn text-white fw-bold btn-sm px-3 py-1 rounded shadow-sm"
+          style="background-color: #e1b45f;"
+          onclick="openAddPolicyModal()">
+    <i class="bi bi-plus-circle me-2"></i>Poliçe Ekle
+  </button>
+</div>
+{% if policies %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="text-white" style="background-color: #6c757d;">
+            <tr>
+              <th class="text-center">Durum</th>
+              <th class="text-center">Bitiş Tarihi</th>
+              <th class="text-center">Poliçe</th>
+              <th class="text-center">Zeyil</th>
+              <th class="text-center">Yenileme</th>
+              <th class="text-center">Şirket</th>
+              <th class="text-center">Ürün</th>
+              <th class="text-center">Branş</th>
+              <th class="text-center">Plaka</th>
+              <th class="text-center">Brüt Prim</th>
+              <th class="text-center"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in policies %}
+              <tr class="border-bottom text-center">
+                <td>
+                  {% if p.PolicyStatus %}
+                    {{ p.PolicyStatus.name }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ p.PoliceBitisTarihi|date:"d.m.Y" }}</td>
+                <td>{{ p.PoliceNo }}</td>
+                <td>{{ p.ZeyilNo }}</td>
+                <td>{{ p.YenilemeNo }}</td>
+                <td>{{ p.company.name }}</td>
+                <td>{{ p.SirketUrunNo }}</td>
+                <td>{{ branch_map|get_item:p.id|default:"-" }}</td>
+                <td>{{ plate_map|get_item:p.id|default:"-" }}</td>
+                <td>
+                  {% with p.collections.first as coll %}
+                    {{ coll.BrutPrimTL|default:"-" }}
+                  {% endwith %}
+                </td>
+                <td>
+                <a href="/database/policy/{{ p.uuid }}/" target="_blank" title="İncele">
+                  <i class="bi bi-box-arrow-up-right fs-5"></i>
+                </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj and page_obj.paginator.num_pages > 1 %}
+        <div class="d-flex justify-content-center py-3">
+          <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1">«</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
+              </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+              {% if num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">»</a>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="text-center text-muted my-4">
+    <i class="bi bi-file-earmark-x fs-1 mb-3" style="color: #adb5bd;"></i>
+    <div>Bu müşteriye ait kayıtlı poliçe bulunamadı.</div>
+  </div>
+{% endif %}
+

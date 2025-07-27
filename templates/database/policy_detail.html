@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    :root {
+    --primary-color: #5e71d3;
+    --secondary-color: #e1b45f;
+    --light-primary: #eef0f9;
+    --text-muted: #6c757d;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+/* İstatistik Kartları */
+.stat-card {
+  background-color: transparent;  /* Arka planla birebir aynı */
+  border-radius: 0;               /* Köşe yumuşatma da kaldırılabilir */
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  min-height: 100px;
+  border: none;
+  box-shadow: none;               /* Gölge tamamen kapatıldı */
+}
+
+.shadow-sm {
+  box-shadow: none !important;
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.bg-info-soft { background-color: rgba(23, 162, 184, 0.1); }
+.bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+.bg-success-soft { background-color: rgba(40, 167, 69, 0.1); }
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.stat-info p {
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.stat-info h4 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+.stat-info small {
+  font-size: 0.8125rem;
+  color: #6c757d;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.label {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.value {
+  font-weight: 400;
+  color: #212529;
+}
+
+/* Kartlar */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+}
+
+.card-title {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+
+/* Profil */
+.profile-image img {
+    width: 100px;
+    height: 100px;
+    border: 3px solid var(--light-primary);
+}
+
+.customer-info .info-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.customer-info .label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.customer-info .value {
+    float: right;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 1rem;
+    }
+}
+
+/* Üst İkonlar */
+.icon-container {
+    gap: 20px;
+    padding: 85px 0;
+}
+
+.form-icon {
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    background-color: #fff;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative; /* Tooltip için gerekli */
+    overflow: visible !important; /* Tooltip dışarı taşabilsin */
+}
+
+.form-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.form-icon img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+}
+
+.form-icon::after {
+    content: attr(title);
+    position: absolute;
+    left: 50%;
+    top: -20px; /* Dairenin tam üstü */
+    transform: translate(-50%, -100%);
+    background: #5e71d3;
+    color: #fff;
+    font-size: 1rem;
+    padding: 7px 18px;
+    border-radius: 14px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(30,30,50,0.13);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s, transform 0.13s;
+    z-index: 99;
+}
+.form-icon:hover::after {
+    opacity: 1;
+    transform: translate(-50%, -120%);
+}
+
+
+
+@media (min-width: 1400px) {
+  .col-md-3 { padding-right: 45px; }
+  .col-md-9 { padding-left: 45px; }
+}
+
+.badge-aktif {
+  background-color: #e1b45f;
+  color: white;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.badge-iptal {
+  background-color: #291f69;
+  color: white;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+
+</style>
+
+<div class="container" style="padding-top: 110px;">
+  <div class="row">
+
+    <!-- 🔹 Sol Alan: 9 Kolon -->
+    <div class="col-md-9 d-flex flex-column gap-3">
+
+    <div class="card p-0 overflow-hidden mb-4">
+      <div class="row g-3 mb-4">
+
+      <!-- Brüt Prim -->
+      <div class="col-md-4">
+        <div class="stat-card shadow-sm">
+          <div class="stat-icon bg-info-soft">
+            <i class="bi bi-cash fs-3 text-info"></i>
+          </div>
+          <div class="stat-info ms-3">
+            <p class="mb-1 fw-semibold text-muted">Brüt Prim</p>
+            <h4 class="mb-0 fw-bold">{{ brut_total|floatformat:2|intcomma }} {{ brut_currency }}</h4>
+            <small class="text-muted d-block mt-1">{{ brut_total_tl|floatformat:2|intcomma }} ₺</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Net Prim -->
+      <div class="col-md-4">
+        <div class="stat-card shadow-sm">
+          <div class="stat-icon bg-success-soft">
+            <i class="bi bi-cash fs-3 text-success"></i>
+          </div>
+          <div class="stat-info ms-3">
+            <p class="mb-1 fw-semibold text-muted">Net Prim</p>
+            <h4 class="mb-0 fw-bold">{{ net_total|floatformat:2|intcomma }} {{ net_currency }}</h4>
+            <small class="text-muted d-block mt-1">{{ net_total_tl|floatformat:2|intcomma }} ₺</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Komisyon -->
+      <div class="col-md-4">
+        <div class="stat-card shadow-sm">
+          <div class="stat-icon bg-warning-soft">
+            <i class="bi bi-percent fs-3 text-warning"></i>
+          </div>
+          <div class="stat-info ms-3">
+            <p class="mb-1 fw-semibold text-muted">Komisyon</p>
+            <h4 class="mb-0 fw-bold">{{ komisyon_total|floatformat:2|intcomma }} {{ komisyon_currency }}</h4>
+            <small class="text-muted d-block mt-1">{{ komisyon_total_tl|floatformat:2|intcomma }} ₺</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Sigortalı + Sigorta Ettiren Alt Alta | Sağda Varlık + Ödeme Planı Yan Yana -->
+    <div class="card p-0 overflow-hidden" style="height: 650px; margin-top: -16px;">
+      <div class="row g-0 text-start h-100">
+       <!-- Sol Blok: Sigorta Ettiren + Sigortalı (alt alta düzgün hizalı) -->
+    <div class="col-md-4 border-end p-3 d-flex flex-column">
+      <!-- Sigorta Ettiren -->
+      <div class="mb-4">
+        <div class="d-flex align-items-center justify-content-start gap-2 mb-2">
+          <div class="stat-icon bg-warning-soft">
+            <i class="fas fa-user text-warning"></i>
+          </div>
+          <strong class="text-dark">Sigorta Ettiren</strong>
+        </div>
+        <div class="customer-info mt-2">
+          {% for label, value, uuid in customer_info %}
+            <div class="info-item mb-2">
+              <span class="label d-block text-muted small">{{ label }}</span>
+              <span class="value d-block fw-semibold d-flex align-items-center gap-1">
+                {{ value }}
+                {% if label == "TCKN" and value and uuid %}
+                  <a href="/database/customer/?key={{ uuid }}" target="_blank" title="Müşteri Detayı">
+                    <i class="fas fa-arrow-up-right-from-square" style="font-size: 14px; color: #291f69;"></i>
+                  </a>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Sigortalı -->
+      <div class="mb-4">
+        <div class="d-flex align-items-center justify-content-start gap-2 mb-2">
+          <div class="stat-icon bg-info-soft">
+            <i class="fas fa-user-check text-info"></i>
+          </div>
+          <strong class="text-dark">Sigortalı</strong>
+        </div>
+        <div class="customer-info mt-2">
+          {% for label, value, uuid in insured_info %}
+            <div class="info-item mb-2">
+              <span class="label d-block text-muted small">{{ label }}</span>
+              <span class="value d-block fw-semibold d-flex align-items-center gap-1">
+                {{ value }}
+                {% if label == "TCKN" and value and uuid %}
+                  <a href="/database/customer/?key={{ uuid }}" target="_blank" title="Müşteri Detayı">
+                    <i class="fas fa-arrow-up-right-from-square" style="font-size: 14px; color: #291f69;"></i>
+                  </a>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ Blok: Varlık + Ödeme Planı -->
+    <div class="col-md-8 p-3">
+      <div class="row h-100">
+        <!-- Varlık -->
+        <div class="col-md-6 border-end d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-start gap-2 mb-2">
+            <div class="stat-icon bg-warning-soft">
+              <i class="fas fa-car text-warning"></i>
+            </div>
+            <strong class="text-dark">Varlık</strong>
+          </div>
+          <div class="customer-info mt-2 flex-grow-1 overflow-auto">
+            {% for label, value in asset_info %}
+              <div class="info-item mb-2">
+                <span class="label d-block text-muted small">{{ label }}</span>
+                <span class="value d-block fw-semibold">{{ value }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Ödeme Planı -->
+        <div class="col-md-6 d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-start gap-2 mb-2">
+            <div class="stat-icon bg-success-soft">
+              <i class="fas fa-credit-card text-success"></i>
+            </div>
+            <strong class="text-dark">Ödeme Planı</strong>
+          </div>
+
+          <div class="row fw-semibold small text-muted border-bottom pb-1 mb-2 text-center">
+            <div class="col">Taksit</div>
+            <div class="col">Tutar</div>
+            <div class="col">Vade</div>
+          </div>
+
+          <div class="flex-grow-1 overflow-auto">
+            {% for taksit in payment_list %}
+              <div class="row small mb-1 text-center">
+                <div class="col">{{ taksit.TaksitSirasi }}</div>
+                <div class="col">{{ taksit.TaksitTutar|floatformat:2 }} TL</div>
+                <div class="col">{{ taksit.TaksitVadeTarihi|date:"d.m.Y" }}</div>
+              </div>
+            {% empty %}
+              <p class="text-muted small">Taksit bilgisi yok.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 🔹 Sağ Alan: Poliçe Kartı -->
+<div class="col-md-3">
+  <div class="card ">
+    <div class="card-body text-center">
+      <div class="profile-image mb-3">
+        <img src="{% static 'logos/' %}{{ company_code }}.png"
+             class="rounded-circle object-fit-contain border bg-white"
+             alt="{{ company_name }}"
+             style="width: 100px; height: 100px; object-fit: contain; padding: 5px;">
+      </div>
+
+      <div class="mb-2">
+        <strong class="text-dark small">{{ company_name }}</strong>
+      </div>
+
+      <div class="pdf-area text-center mb-2" style="min-height: 25px;">
+        {% if pdf_service_id %}
+          <button
+            type="button"
+            class="btn btn-link p-0 m-0 text-decoration-none"
+            id="pdf-download-btn"
+            title="PDF Al"
+          >
+            <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+          </button>
+        {% endif %}
+      </div>
+
+
+      <div class="mt-4">
+        {% if policy.AktifMi == 1 %}
+          <span class="badge badge-aktif badge-lg">Aktif</span>
+        {% else %}
+          <span class="badge badge-iptal badge-lg">İptal</span>
+        {% endif %}
+      </div>
+
+      <div class="customer-info text-start mt-3">
+        {% for label, value in poli_info_list %}
+          <div class="info-item">
+            <span class="label">{{ label }}:</span>
+            <span class="value">{{ value }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+
+<script src="{% static 'js/customer.js' %}"></script>
+<script src="{% static 'js/utils_customer.js' %}"></script>
+<script src="{% static 'js/customer_tab.js' %}"></script>
+<script src="{% static 'js/utils_pdf.js' %}"></script>
+
+<script>
+  window.customerKey = "{{ customer.customer_key }}";
+  window.customerIdentityNumber = "{{ customer.identity_number }}";
+  window.agency_id = "{{ request.user.agency.id }}";
+  window.user_id = "{{ request.user.id }}";
+  window.birthDate = "{% if customer.birth_date %}{{ customer.birth_date|date:'Y-m-d' }}{% else %}''{% endif %}";
+  window.hasPrimaryPhone = {{ has_primary_phone|yesno:"true,false" }};
+  window.hasCustomerRelation = {{ has_relation|yesno:"true,false" }};
+
+</script>
+<script>
+  const pdfServiceId = "{{ pdf_service_id }}";
+  const pdfParams = {
+    policy_number: "{{ pdf_policy_number }}",
+    product_code: "{{ pdf_product_code }}",
+    agency_code: "{{ pdf_agency_code }}",
+    pdf_type: "police",
+    endorsement_number: "{{ policy.ZeyilNo|default:'0' }}",
+    renewal_number: "{{ policy.YenilemeNo|default:'0' }}"
+  };
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("pdf-download-btn");
+    if (btn && pdfServiceId) {
+      btn.addEventListener("click", function () {
+        requestPolicyPDF(pdfServiceId, pdfParams);
+      });
+    }
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <div class="card shadow-lg p-4 bg-white rounded">
+        <div class="card-body">
+            <!-- Şirket ve Ürün Seçimi -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label for="companySelect" class="form-label">Sigorta Şirketi:</label>
+                    <select id="companySelect" class="form-select" required>
+                        <option value="">Lütfen bir şirket seçin</option>
+                        <!-- AJAX ile doldurulacak -->
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="productSelect" class="form-label">Ürün Kodu:</label>
+                    <select id="productSelect" class="form-select" required disabled>
+                        <option value="">Önce bir şirket seçin</option>
+                        <!-- AJAX ile doldurulacak -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Key/Parameter Mapping Alanı -->
+            <div class="table-responsive">
+                <table class="table table-bordered text-center" id="parameterTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Key</th>
+                            <th>Parameter</th>
+                            <th>Target Company Key</th>
+                            <th>Company Parameter Key</th>
+                            <th>Company Parameter Value</th>
+                            <th>Sil</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parameterTableBody">
+                        <!-- Satırlar dinamik olarak JS ile eklenecek -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-end mt-4">
+                <button type="button" class="btn btn-success" id="addRowBtn">+ Satır Ekle</button>
+                <button type="submit" class="btn btn-primary" id="saveMappingsBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Şirket ve ürün getirme
+document.addEventListener('DOMContentLoaded', function () {
+    const companySelect = document.getElementById('companySelect');
+    const productSelect = document.getElementById('productSelect');
+
+    // Şirketleri getir
+    fetch('/database/api/companies/')
+      .then(res => res.json())
+      .then(data => {
+        companySelect.innerHTML = '<option value="">Lütfen bir şirket seçin</option>';
+        data.forEach(company => {
+          companySelect.innerHTML += `<option value="${company.id}">${company.name}</option>`;
+        });
+      })
+      .catch(() => {
+        companySelect.innerHTML = '<option value="">Şirketler yüklenemedi</option>';
+      });
+
+    // Şirket seçilince ürünleri getir
+    companySelect.addEventListener('change', function () {
+      const companyId = this.value;
+      productSelect.disabled = true;
+      productSelect.innerHTML = '<option value="">Lütfen bir şirket seçin</option>';
+
+      if (!companyId) return;
+
+      fetch(`/database/get-unmapped-product-codes/?company_id=${companyId}`)
+        .then(res => res.json())
+        .then(data => {
+          productSelect.innerHTML = '<option value="">Lütfen bir ürün seçin</option>';
+          if (data.length === 0) {
+            productSelect.innerHTML = '<option value="">Seçilebilecek ürün bulunamadı</option>';
+            return;
+          }
+          data.forEach(branch => {
+            productSelect.innerHTML += `<option value="${branch.code}">${branch.label}</option>`;
+            // value: code, görünen: label (örn: 103 - DASK)
+          });
+          productSelect.disabled = false;
+        })
+        .catch(() => {
+          productSelect.innerHTML = '<option value="">Ürünler yüklenemedi</option>';
+        });
+    });
+});
+
+
+// Satır ekleme
+document.addEventListener('DOMContentLoaded', function () {
+    const parameterTableBody = document.getElementById('parameterTableBody');
+    const addRowBtn = document.getElementById('addRowBtn');
+
+    function createEmptyRow(selectedKeyId = null, selectedParamId = null, disableKey = false, disableParam = false) {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="d-flex align-items-center gap-2">
+          <select class="form-select keySelect" name="key" style="width:85%;" ${disableKey ? "disabled" : ""} required>
+            <option value="">Key seçiniz</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-primary addParamBtn" title="Parametreleri Otomatik Ekle">
+            <i class="bi bi-plus"></i>
+          </button>
+        </td>
+        <td>
+          <select class="form-select paramSelect" name="parameter" ${disableParam ? "disabled" : ""}>
+            <option value="">Parametre</option>
+          </select>
+        </td>
+        <td>
+          <input type="text" class="form-control" name="target_company_key" placeholder="Target Company Key">
+        </td>
+        <td>
+          <input type="text" class="form-control" name="company_parameter" placeholder="Kod">
+        </td>
+        <td>
+          <input type="text" class="form-control" name="company_parameter_value" placeholder="Açıklama">
+        </td>
+        <td>
+          <button type="button" class="btn btn-danger btn-sm deleteRowBtn">&times;</button>
+        </td>
+      `;
+      parameterTableBody.appendChild(row);
+
+      // Key'leri doldur
+      fetch('/database/api/keys/')
+        .then(res => res.json())
+        .then(keys => {
+          const keySelect = row.querySelector('.keySelect');
+          keys.forEach(key => {
+            keySelect.innerHTML += `<option value="${key.id}">${key.name} (${key.id})</option>`;
+          });
+          if (selectedKeyId) keySelect.value = selectedKeyId;
+        })
+        .then(() => {
+          if (selectedKeyId) loadAndSetParams(row, selectedKeyId, selectedParamId, disableParam);
+        });
+
+      // Key değişince parametreleri getir
+      row.querySelector('.keySelect').addEventListener('change', function () {
+        loadAndSetParams(row, this.value);
+      });
+
+      // + butonuna tıklayınca parametrelerin hepsini satır satır ekle
+      row.querySelector('.addParamBtn').addEventListener('click', function () {
+        const keyId = row.querySelector('.keySelect').value;
+        if (!keyId) return;
+        fetch(`/database/api/parameters-for-key/?key_id=${keyId}`)
+          .then(res => res.json())
+          .then(params => {
+            if (!params.length) return;
+            // İlk parametre zaten var, kalanları satır olarak ekle
+            for (let i = 1; i < params.length; i++) {
+              createEmptyRow(keyId, params[i].id, true, true);
+            }
+          });
+      });
+    }
+
+    // Parametreleri getirip paramSelect'i doldur, ilk parametreyi seçili yap
+    function loadAndSetParams(row, keyId, selectedParamId = null, disableParam = false) {
+  const paramSelect = row.querySelector('.paramSelect');
+  fetch(`/database/api/parameters-for-key/?key_id=${keyId}`)
+    .then(res => res.json())
+    .then(params => {
+      if (!params.length) {
+        // Parametre yoksa select’i disable veya gizle
+        paramSelect.disabled = true;
+        paramSelect.value = "";
+        paramSelect.innerHTML = '<option value="">Parametre Yok</option>';
+        // (Dilersen şu satırı da ekle, input'u görünmez yapar)
+        // paramSelect.style.display = "none";
+        return;
+      }
+      paramSelect.style.display = ""; // Görünür yap
+      paramSelect.disabled = false;
+      paramSelect.innerHTML = '<option value="">Parametre</option>';
+      params.forEach(param => {
+        paramSelect.innerHTML += `<option value="${param.id}">${param.name}</option>`;
+      });
+      if (selectedParamId) {
+        paramSelect.value = selectedParamId;
+      } else {
+        paramSelect.value = params[0].id;
+      }
+      if (disableParam) paramSelect.disabled = true;
+    });
+}
+
+    // Satır ekleme butonu
+    addRowBtn.addEventListener('click', function () {
+      createEmptyRow();
+    });
+
+    // Satır silme
+    parameterTableBody.addEventListener('click', function (e) {
+      if (e.target.classList.contains('deleteRowBtn')) {
+        const tr = e.target.closest('tr');
+        if (tr) tr.remove();
+      }
+    });
+});
+
+//Kaydetme
+document.getElementById('saveMappingsBtn').addEventListener('click', function (e) {
+    e.preventDefault();
+
+    const saveBtn = this;
+    saveBtn.disabled = true;
+
+    const companySelect = document.getElementById('companySelect');
+    const productSelect = document.getElementById('productSelect');
+    const companyId = companySelect.value;
+    const productCode = productSelect.value;
+
+    const rows = document.querySelectorAll('#parameterTableBody tr');
+    const mappings = [];
+
+    rows.forEach(row => {
+        const keyId = row.querySelector('[name="key"]')?.value;
+        const paramId = row.querySelector('[name="parameter"]')?.value || null;
+        const targetKey = row.querySelector('[name="target_company_key"]')?.value;
+        const companyParam = row.querySelector('[name="company_parameter"]')?.value;
+        const companyParamValue = row.querySelector('[name="company_parameter_value"]')?.value;
+
+        if (keyId) {
+            mappings.push({
+                company_id: companyId,
+                product_code: productCode,
+                key_id: keyId,
+                parameter_id: paramId,
+                target_company_key: targetKey,
+                company_parameter: companyParam,
+                company_parameter_value: companyParamValue,
+            });
+        }
+    });
+
+    // ZORUNLU ALAN KONTROLÜ
+    if (!companyId) {
+        showGlobalModalPopup("Lütfen bir <b>sigorta şirketi</b> seçin.", { type: "warning", title: "Zorunlu Alan" });
+        companySelect.classList.add("is-invalid");
+        saveBtn.disabled = false;
+        return;
+    } else {
+        companySelect.classList.remove("is-invalid");
+    }
+
+    if (!productCode) {
+        showGlobalModalPopup("Lütfen bir <b>ürün kodu</b> seçin.", { type: "warning", title: "Zorunlu Alan" });
+        productSelect.classList.add("is-invalid");
+        saveBtn.disabled = false;
+        return;
+    } else {
+        productSelect.classList.remove("is-invalid");
+    }
+
+    if (mappings.length === 0) {
+        showGlobalModalPopup("En az bir mapping satırı eklemelisiniz.", { type: "warning", title: "Zorunlu Alan" });
+        saveBtn.disabled = false;
+        return;
+    }
+
+    fetch('/database/api/save-mappings/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ mappings })
+    })
+    .then(res => res.json())
+    .then(data => {
+        saveBtn.disabled = false;
+        if (data.success) {
+            showGlobalModalPopup(
+                "<b>Mapping(ler) başarıyla kaydedildi!</b><br>İşleminiz başarıyla tamamlandı.",
+                { type: "success", title: "Başarılı" }
+            );
+        } else if (data.exists) {
+            showGlobalModalPopup(
+                "Bazı mappingler zaten var:<br><ul>" + data.exists.map(x => `<li>${x}</li>`).join('') + "</ul>",
+                { type: "warning", title: "Zaten Kayıtlı" }
+            );
+        } else if (data.error) {
+            showGlobalModalPopup(
+                "Bir hata oluştu:<br>" + data.error,
+                { type: "error", title: "Hata" }
+            );
+        }
+
+    })
+        .catch(() => {
+            saveBtn.disabled = false;
+            showGlobalModalPopup(
+                "Beklenmedik bir hata oluştu. Lütfen tekrar deneyiniz.",
+                { type: "error", title: "Hata" }
+            );
+        });
+});
+
+
+
+</script>
+
+{% endblock %}

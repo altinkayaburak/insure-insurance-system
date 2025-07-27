@@ -1,0 +1,172 @@
+<!-- 🔼 İlişki Ekle Butonu -->
+<div class="d-flex justify-content-end mb-3">
+<button class="btn text-white fw-bold btn-sm px-3 py-1 rounded shadow-sm"
+        style="background-color: #e1b45f;"
+        onclick="resetRelationshipModal(); new bootstrap.Modal(document.getElementById('addRelationshipModal')).show();">
+  <i class="bi bi-plus-circle me-2"></i>İlişki Kur
+</button>
+</div>
+
+{% if relationships %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="text-white" style="background-color: #6c757d;">
+            <tr>
+              <th class="ps-4">Ad Soyad</th>
+              <th>T.C. Kimlik No</th>
+              <th>İlişki Türü</th>
+              <th>Telefon</th>
+              <th>Tarih</th>
+              <th class="text-center">Sil</th>
+              <th class="text-center pe-4">Git</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in relationships %}
+              {% if r.from_customer == customer %}
+                {% with person=r.to_customer relation=r.relationship_type.name %}
+                  <tr class="border-bottom" id="relationship-row-{{ r.id }}">
+                    <td class="ps-4 fw-medium">{{ person.full_name }}</td>
+                    <td>{{ person.identity_number|slice:":3" }}***{{ person.identity_number|slice:"-2:" }}</td>
+                    <td>{{ relation }}</td>
+                    <td>{{ person.phone_number|slice:":3" }}***{{ person.phone_number|slice:"-2:" }}</td>
+                    <td class="text-muted">{{ r.created_at|date:"d.m.Y H:i" }}</td>
+                    <td class="text-center">
+                      <a href="#" class="text-danger" title="İlişkiyi Sil" onclick="deleteRelationship({{ r.id }}); return false;">
+                        <i class="bi bi-trash3 fs-5"></i>
+                      </a>
+                    </td>
+                    <td class="text-center pe-4">
+                      <a href="/database/customer/?key={{ person.customer_key }}" class="text-decoration-none text-primary">
+                        <i class="bi bi-box-arrow-up-right fs-5"></i>
+                      </a>
+                    </td>
+                  </tr>
+                {% endwith %}
+              {% elif r.to_customer == customer %}
+                {% with person=r.from_customer relation=r.relationship_type.reverse_name %}
+                  <tr class="border-bottom" id="relationship-row-{{ r.id }}">
+                    <td class="ps-4 fw-medium">{{ person.full_name }}</td>
+                    <td>{{ person.identity_number|slice:":3" }}***{{ person.identity_number|slice:"-2:" }}</td>
+                    <td>{{ relation }}</td>
+                    <td>{{ person.phone_number|slice:":3" }}***{{ person.phone_number|slice:"-2:" }}</td>
+                    <td class="text-muted">{{ r.created_at|date:"d.m.Y H:i" }}</td>
+                    <td class="text-center">
+                      <a href="#" class="text-danger" title="İlişkiyi Sil" onclick="deleteRelationship({{ r.id }}); return false;">
+                        <i class="bi bi-trash3 fs-5"></i>
+                      </a>
+                    </td>
+                    <td class="text-center pe-4">
+                      <a href="/database/customer/?key={{ person.customer_key }}" class="text-decoration-none text-primary">
+                        <i class="bi bi-box-arrow-up-right fs-5"></i>
+                      </a>
+                    </td>
+                  </tr>
+                {% endwith %}
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-center py-3">
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="loadRelationshipPage({{ page_obj.previous_page_number }})">«</a>
+          </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="#" onclick="loadRelationshipPage({{ num }})">{{ num }}</a>
+          </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="loadRelationshipPage({{ page_obj.next_page_number }})">»</a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  {% endif %}
+{% else %}
+  <div class="text-center text-muted my-4">
+    <i class="bi bi-person-x fs-1 mb-3" style="color: #adb5bd;"></i>
+    <div>Bu müşteriyle ilişkilendirilmiş kişi bulunmamaktadır.</div>
+  </div>
+{% endif %}
+
+<!-- 🔽 İlişki Kur Modal -->
+<div class="modal fade" id="addRelationshipModal" tabindex="-1" aria-labelledby="relationshipModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <!-- Modal Başlık -->
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">İlişki Kur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <!-- Modal İçeriği + Form -->
+      <form id="addRelationshipForm" onsubmit="return handleRelationshipSubmit(event)">
+        <div class="modal-body">
+
+          <!-- Kimlik Girişi ve Ara -->
+          <div class="input-group mb-3">
+            <input type="text" id="add_identity_input" class="form-control" maxlength="11"
+              inputmode="numeric" pattern="[0-9]{10,11}" placeholder="T.C. Kimlik No" required>
+            <button class="btn text-white fw-bold" style="background-color:#e1b45f;" type="button"
+              onclick="searchRelationshipPerson()">Ara</button>
+          </div>
+
+          <!-- Doğum Tarihi ve Ara -->
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-cake2"></i></span>
+            <input type="text" id="add_birthdate_input" class="form-control"
+              placeholder="Doğum Tarihi (GG.AA.YYYY)">
+            <button class="btn text-white fw-bold" style="background-color:#e1b45f;" type="button"
+              onclick="fetchFullnameByIdentityAndBirth()">Sigortalı Ara</button>
+          </div>
+
+          <!-- Ad Soyad -->
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" id="add_fullname_input" class="form-control readonly-grey"
+              placeholder="Ad Soyad" required>
+          </div>
+          <!-- Telefon -->
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+            <input type="text" id="add_phone_input" class="form-control" maxlength="10"
+              inputmode="numeric" pattern="5[0-9]{9}" placeholder="Telefon (5xx xxx xx xx)">
+          </div>
+          <!-- İlişki Türü -->
+          <div id="relationship_type_wrapper" class="mb-3 position-relative">
+            <label for="relationship_type_select" class="form-label">İlişki Türü</label>
+            <select id="relationship_type_select" class="form-select" required>
+              <option value="">İlişki Türü Seçiniz</option>
+            </select>
+          </div>
+          <!-- Hata Kutusu -->
+          <div id="relation_error" class="text-danger small mt-2"></div>
+        </div>
+        <!-- Modal Footer -->
+        <div class="modal-footer" id="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Kapat</button>
+          <button class="btn btn-primary" id="relationshipSaveBtn" type="submit">
+            İlişkilendir ve Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+

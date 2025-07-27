@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- ✅ CSS -->
+<style>
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table-responsive {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+</style>
+
+
+<div class="container mt-5">
+  <!-- Başlık + Buton -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Sigorta Şirketleri</h4>
+      <button type="button" id="openCompanyModalBtn" class="btn btn-danger btn-sm px-3 py-2 shadow-sm">
+        <i class="bi bi-plus-circle me-2"></i>Yeni Şirket Ekle
+      </button>
+  </div>
+
+  <!-- Arama Kutusu -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Şirket ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Tablo -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive px-2">
+        <table class="table table-hover table-bordered align-middle" style="font-size: 14px;">
+          <thead class="text-white" style="background-color: #291f69;">
+            <tr>
+              <th class="ps-3">#</th>
+              <th>Ad</th>
+              <th>Kodu</th>
+              <th>Durum</th>
+              <th class="text-center pe-3">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for company in page_obj %}
+            <tr>
+              <td class="ps-3 text-muted small">{{ company.id }}</td>
+              <td class="fw-medium">{{ company.name }}</td>
+              <td class="text-muted small">{{ company.company_code }}</td>
+              <td>
+                {% if company.is_active %}
+                  <span class="badge bg-status-active">Aktif</span>
+                {% else %}
+                  <span class="badge bg-status-passive">Pasif</span>
+                {% endif %}
+              </td>
+              <td class="text-center pe-3">
+                <button class="btn btn-sm btn-light edit-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editCompanyModal"
+                        data-id="{{ company.id }}"
+                        data-name="{{ company.name }}"
+                        data-code="{{ company.company_code }}"
+                        data-active="{{ company.is_active }}">
+                  <i class="bi bi-pencil text-danger"></i>
+                </button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Şirket bulunamadı.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<!-- 🔽 Sayfalama -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center py-3">
+  <ul class="pagination pagination-sm mb-0">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a>
+      </li>
+    {% endif %}
+
+    {% for num in page_range %}
+      {% if num == '...' %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a>
+      </li>
+    {% endif %}
+  </ul>
+</div>
+{% endif %}
+
+
+
+
+<!-- Tek Modal: Şirket Ekle / Düzenle -->
+<div class="modal fade" id="companyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-white rounded-3 shadow-sm" style="border: none;">
+      <form id="companyForm" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="id" id="companyID">
+
+        <!-- Modal Başlık -->
+        <div class="modal-header border-0 bg-white">
+          <h5 class="modal-title fw-bold text-dark" id="companyModalTitle">Yeni Şirket Ekle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <!-- Modal İçerik -->
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Şirket Adı</label>
+            <input type="text" name="name" id="companyName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Şirket Kodu</label>
+            <input type="text" name="company_code" id="companyCode" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Durum</label>
+            <select name="is_active" id="companyActive" class="form-select">
+              <option value="true">Aktif</option>
+              <option value="false">Pasif</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer border-0 bg-white">
+          <button class="btn btn-light border" data-bs-dismiss="modal">İptal</button>
+          <button type="submit" class="btn" style="background: #291f69; color: #fff;" id="companySaveBtn">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Enter tuşuna basınca arama yap
+document.getElementById('searchBox').addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchKeys();
+    }
+});
+
+function searchKeys() {
+    let query = document.getElementById('searchBox').value;
+    window.location.href = "?q=" + encodeURIComponent(query);
+}
+
+function clearSearch() {
+    window.location.href = window.location.pathname;
+}
+
+
+function setupCompanyTabEvents() {
+  // Yeni Şirket Modalı Aç
+  document.getElementById("openCompanyModalBtn")?.addEventListener("click", function () {
+    openCompanyModal("add");
+  });
+
+  // Satırda düzenle modalı aç
+  document.querySelectorAll(".edit-btn").forEach(btn => {
+    btn.onclick = function () {
+      openCompanyModal("edit", btn.dataset);
+    };
+  });
+
+  // Modal submit (ekle/güncelle ayrımı)
+  document.getElementById("companyForm").onsubmit = function (e) {
+    e.preventDefault();
+    saveCompanyForm();
+  };
+}
+
+// Modal aç ve doldur (ekle/düzenle)
+function openCompanyModal(type, data = {}) {
+  const modal = new bootstrap.Modal(document.getElementById("companyModal"));
+  const title = document.getElementById("companyModalTitle");
+  const form = document.getElementById("companyForm");
+
+  form.reset();
+  document.getElementById("companyID").value = "";
+
+  if (type === "edit" && data) {
+    title.textContent = "Şirket Düzenle";
+    form.companyID.value = data.id || "";
+    form.companyName.value = data.name || "";
+    form.companyCode.value = data.company_code || "";
+    form.companyActive.value = (data.active === "true" || data.active === true || data.active === "True") ? "true" : "false";
+  } else {
+    title.textContent = "Yeni Şirket Ekle";
+  }
+
+  modal.show();
+}
+
+function saveCompanyForm() {
+  const form = document.getElementById("companyForm");
+  const formData = new FormData(form);
+  const url = "/database/insurance-companies/save/"; // Doğru endpoint!
+
+  fetch(url, {
+    method: "POST",
+    headers: { "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value },
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById("companyModal")).hide();
+        showGlobalModalPopup("Şirket başarıyla kaydedildi!", { type: "success", title: "Başarılı" });
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showGlobalModalPopup(data.error || "Şirket kaydedilemedi!", { type: "error", title: "Hata" });
+      }
+    })
+    .catch(err => showGlobalModalPopup("Sistem hatası: " + err.message, { type: "error", title: "Hata" }));
+}
+
+
+// --- Sayfa ilk yüklendiğinde (veya AJAX sonrası tablo yüklendiğinde):
+document.addEventListener("DOMContentLoaded", function() {
+  setupCompanyTabEvents();
+});
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,710 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<style>
+  input[type="checkbox"]#key_144:checked {
+    background-color: #d64a42;
+    border-color: #d64a42;
+  }
+  select[name="key_201"] {
+    pointer-events: none;
+    background-color: #e9ecef;
+    color: #6c757d;
+  }
+
+
+
+.product-form-header {display:flex;align-items:center;gap:1.1rem;margin-bottom:1.5rem;margin-top:0.8rem;margin-left:0.1rem;}
+.product-form-header .icon-circle {background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;height:48px;width:48px;box-shadow:0 2px 10px rgba(48,87,199,.08);}
+.select2-container--default .select2-selection--single{background-color:#fff;border:1px solid #ced4da;border-radius:0.375rem;height:38px;padding:0.375rem 0.75rem;display:flex;align-items:center;font-size:1rem;transition:border-color .15s ease-in-out,box-shadow .15s ease-in-out;}
+.select2-container--default .select2-selection--single .select2-selection__rendered{color:#495057;line-height:24px;padding-left:0;padding-right:0;}
+.select2-container--default .select2-selection--single .select2-selection__arrow{height:38px;right:10px;top:1px;}
+.select2-container--default .select2-selection--single:focus{border-color:#86b7fe;outline:0;box-shadow:0 0 0 0.25rem rgba(13,110,253,.25);}
+.select2-container--default .select2-selection--single .select2-selection__placeholder{color:#6c757d;}
+
+
+</style>
+
+<div class="container mt-3">
+  <!-- Form Ürün Başlığı -->
+  <div class="product-form-header align-items-center mb-3" style="gap:1.1rem; margin-top: 0.8rem; margin-left: 0.1rem;">
+    <span class="icon-circle shadow-sm bg-white d-flex align-items-center justify-content-center" style="height:48px;width:48px;border-radius:50%;">
+      <img src="{% static 'img/insurance-agent.png' %}" alt="IMM" style="width:28px;height:28px;">
+    </span>
+    <span class="fw-bold" style="font-size:1.20rem; color:#3057c7;">
+      İMM
+    </span>
+  </div>
+  <div class="row g-4">
+
+    <!-- 1. Kutu: Sigortalı ve Sigorta Ettiren Kutusu -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-2">
+          <div class="d-flex align-items-center">
+            <div class="icon-circle p-2 rounded-circle me-2" style="background-color: rgba(214, 74, 66, 0.1);">
+              <img src="{% static 'img/user_detail.png' %}" alt="User Icon" class="img-fluid" style="width: 20px; height: 18px;">
+            </div>
+            <h6 class="mb-0 fw-semibold" style="color: #d64a42; font-size: 0.9rem;">Sigortalı Bilgileri</h6>
+          </div>
+        </div>
+        <div class="card-body p-3">
+                   <form id="sigortaliForm">
+            {% for key in blocks.sigortali %}
+              {% if key.id == 33 %}
+                <!-- Toggle Switch: Sigorta Ettiren Alanı Aç/Kapat -->
+                <div class="form-check form-switch mb-2">
+                <input type="checkbox"
+                       class="form-check-input sigorta-ettiren-toggle"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       {% if selected_ettiren %}checked{% endif %}>
+                  <label class="form-check-label small" for="key_{{ key.id }}">{{ key.description }}</label>
+                </div>
+              {% else %}
+                <!-- Diğer readonly alanlar -->
+                <div class="mb-2">
+                  <label class="form-label small">{{ key.description }}</label>
+                  <input type="{% if key.input_type == 'date' %}date{% else %}text{% endif %}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if key.name == 'SigortaliDogumTarihi' and customer.birth_date %}{{ customer.birth_date|date:'Y-m-d' }}{% elif key.name == 'SigortaliAdi' %}{{ customer.full_name }}{% elif key.name == 'SigortaliKimlikNo' %}{{ customer.identity_number }}{% elif key.name == 'SigortaliCepTelefonu' %}{{ primary_phone|default:'' }}{% endif %}"
+                         readonly style="background-color: #e9ecef;">
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            <!-- Sigorta Ettiren Alanı (toggle ile açılır) -->
+           <div id="sigortaEttirenFields" class="mt-3 pt-2 border-top {% if not selected_ettiren %}d-none{% endif %}">
+            {% for key in blocks.sigorta_ettiren %}
+              <div class="mb-2">
+                <label class="form-label small">{{ key.description }}</label>
+
+           {% if key.name == 'SigortaEttirenAdi' %}
+              <input type="text"
+                       class="form-control"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       value="{% if selected_ettiren %}{{ selected_ettiren.full_name }}{% endif %}"
+                       readonly style="background-color: #e9ecef;">
+
+                {% elif key.name == 'SigortaEttirenKimlikNo' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.identity_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+
+                {% elif key.name == 'SigortaEttirenDogumTarihi' %}
+                  <div class="mb-2">
+                    <input type="text"
+                           class="form-control"
+                           name="key_{{ key.id }}"
+                           id="sigortaEttirenDogumTarihi"
+                           value="{% if selected_ettiren %}{{ selected_ettiren.birth_date }}{% endif %}"
+                           {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                  </div>
+                {% elif key.name == 'SigortaEttirenCepTelefonu' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.phone_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+                {% else %}
+                  <!-- Varsayılan input (ekstra alanlar varsa) -->
+                  <input type="{{ key.input_type }}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+<!-- 2. Kutu: Araç Bilgileri -->
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-primary bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/truck.png' %}" alt="Araç Bilgisi" class="img-fluid" style="width: 20px; height: 18px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-primary" style="font-size: 0.9rem;">Araç Bilgileri</h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+      {% for key in blocks.arac_bilgi %}
+        {% if key.id == 156 %}
+          <!-- Sıfır Araç? Switch -->
+          <div class="form-check form-switch mb-3">
+            <input type="checkbox" class="form-check-input" name="key_156" id="key_156" value="1">
+            <label class="form-check-label small" for="key_156">Sıfır Araç?</label>
+          </div>
+        {% elif key.id == 79 %}
+          <div class="mb-2">
+            <label class="form-label small">{{ key.description }}</label>
+            <div class="position-relative">
+              <input type="{{ key.input_type|default:'text' }}"
+                     class="form-control pe-5"
+                     name="key_79"
+                     id="key_79_input"
+                     placeholder="{{ key.description }}">
+              <button type="button"
+                      id="sorgulaKey79Btn"
+                      class="btn btn-sm fw-bold position-absolute end-0 top-0 mt-1 me-1"
+                      style="background-color: #e1b45f; color: white;">
+                <i class="bi bi-search"></i> Sorgula
+              </button>
+            </div>
+          </div>
+          {% elif key.id == 85 %}
+            <!-- Araç Tarzı -->
+            <div class="mb-2">
+              <label class="form-label small">{{ key.description }}</label>
+              <select class="form-select" name="key_85" id="key_85" required>
+                <option value="">Seçiniz</option>
+                <option value="1">Otomobil</option>
+                <option value="4">Kamyonet</option>
+              </select>
+            </div>
+        {% elif key.id == 81 %}
+          <!-- Marka -->
+          <div class="mb-2">
+            <label class="form-label small">{{ key.description }}</label>
+              <select class="form-select" name="key_81" id="key_81" required style="width: 100%;">
+              <option value="">Seçiniz</option>
+              <!-- JS ile doldurulacak -->
+            </select>
+          </div>
+        {% elif key.id == 88 %}
+          <!-- Model Yılı -->
+          <div class="mb-2">
+            <label class="form-label small">{{ key.description }}</label>
+            <select class="form-select" name="key_88" id="key_88" required>
+              <option value="">Seçiniz</option>
+              <!-- JS ile doldurulacak -->
+            </select>
+          </div>
+        {% elif key.id == 82 %}
+          <!-- Araç Modeli -->
+          <div class="mb-2">
+            <label class="form-label small">{{ key.description }}</label>
+            <select class="form-select" name="key_82" id="key_82" required>
+              <option value="">Seçiniz</option>
+              <!-- JS ile doldurulacak -->
+            </select>
+          </div>
+
+      {% elif key.id == 80 %}
+        <!-- 80 no'lu Alan – Marka Tip Kodu -->
+        <div class="mb-2">
+          <label class="form-label small">{{ key.description }}</label>
+          <input type="text"
+                 class="form-control"
+                 name="key_80"
+                 id="key_80"
+                 readonly>          <!-- kullanıcı değiştiremesin -->
+        </div>
+
+      {% else %}
+        <div class="mb-2">
+          <label class="form-label small">{{ key.description }}</label>
+          <input type="{{ key.input_type|default:'text' }}"
+                 class="form-control"
+                 name="key_{{ key.id }}">
+        </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+
+
+    <!-- 3. Kutu: Ek Bilgiler (Boş kutu, içeriği sonra doldurulacak) -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-2">
+          <div class="d-flex align-items-center">
+            <div class="icon-circle bg-info bg-opacity-10 p-2 rounded-circle me-2">
+              <img src="{% static 'img/list_detail.png' %}" alt="Ek Bilgi Icon" class="img-fluid" style="width: 18px; height: 16px;">
+            </div>
+            <h6 class="mb-0 fw-semibold text-info" style="font-size: 0.9rem;">Ek Bilgiler</h6>
+          </div>
+        </div>
+        <div class="card-body p-3">
+          {% for key in blocks.ek_bilgiler %}
+      <div class="mb-2">
+        <label class="form-label small">{{ key.description }}</label>
+        <div id="key_{{ key.id }}_container">
+          {% if key.id == 225 %}
+            <select class="form-select" name="key_225" id="key_input_225">
+              <option value="">Seçiniz</option>
+              <option value="E">Evet</option>
+              <option value="H">Hayır</option>
+            </select>
+          {% else %}
+            <input type="{{ key.input_type|default:'text' }}" class="form-control" name="key_{{ key.id }}" id="key_input_{{ key.id }}">
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- 4. Kutu: Teklif Bilgileri (Zaten hazır) -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-2">
+          <div class="d-flex align-items-center">
+            <div class="icon-circle bg-warning bg-opacity-10 p-2 rounded-circle me-2">
+              <img src="{% static 'img/list_detail.png' %}" alt="Teklif Icon" class="img-fluid" style="width: 18px; height: 16px;">
+            </div>
+            <h6 class="mb-0 fw-semibold text-warning" style="font-size: 0.9rem;">Teklif Bilgileri</h6>
+          </div>
+        </div>
+        <div class="card-body p-3">
+          {% for key in blocks.teklif %}
+            {% with input_id="teklif_key_"|add:key.id|stringformat:"s" %}
+            <div class="mb-2">
+              <label class="form-label small" for="{{ input_id }}">{{ key.description }}</label>
+              {% if key.input_type == "select" or key.parameters|length > 0 %}
+                <select name="key_{{ key.id }}" id="{{ input_id }}" class="form-select">
+                  <option value="">Seçiniz</option>
+                  {% for param in key.parameters %}
+                    <option value="{{ param.ParameterID }}">{{ param.ParameterName }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input type="{{ key.input_type|default:'text' }}"
+                       class="form-control"
+                       name="key_{{ key.id }}"
+                       id="{{ input_id }}"
+                       {% if key.readonly %}readonly style="background-color: #e9ecef;"{% endif %}>
+              {% endif %}
+            </div>
+            {% endwith %}
+          {% endfor %}
+          <div class="mb-2 text-muted small mt-3">
+            <strong>Proposal ID:</strong> {{ proposal_id }}<br>
+            <strong>Ürün Kodu:</strong> {{ product_code }}
+          </div>
+          <div class="d-grid">
+            <button id="submitOffer" type="button" class="btn btn-primary btn-sm">Teklif Al</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Teklif Önizleme Modalı -->
+<div class="modal fade" id="offerPreviewModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Form Key/Value Önizleme</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="offerPreviewBody">
+        <!-- Key-value listesi buraya gelecek -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<input type="hidden" name="key_204" id="key_204">
+<input type="hidden" name="key_205" id="key_205">
+<input type="hidden" name="key_207" id="key_207">
+<input type="hidden" name="key_206" id="key_206">
+<input type="hidden" name="key_208" id="key_208">
+<input type="hidden" name="key_209" id="key_209">
+<input type="hidden" name="key_210" id="key_210">
+<input type="hidden" name="key_212" id="key_212">
+<input type="hidden" name="key_211" id="key_211">
+<input type="hidden" name="key_213" id="key_213">
+
+<script src="{% static 'js/utils_customer.js' %}"></script>
+
+<script>
+  window.proposal_id = "{{ proposal_id }}";
+  window.product_code = "{{ product_code }}";
+  window.agency_id = "{{ request.user.agency.id }}";
+  window.user_id = "{{ request.user.id }}";
+  window.formType = "{{ form_type }}";
+  window.branch_id = "{{ request.user.branch.id }}";
+  window.customer_id = "{{ customer.id }}";    // <<< EKLE (customer objesi sayfada varsa!)
+</script>
+
+
+<script>
+  function getCookie(n){
+  const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([^;]*)"));
+  return m?decodeURIComponent(m[1]):null;
+}
+function clearSelect(sel,ph="Seçiniz"){
+  sel.innerHTML=`<option value="">${ph}</option>`;
+  if(window.jQuery && $(sel).hasClass("select2-hidden-accessible"))
+    $(sel).val(null).trigger("change.select2");
+}
+function destroySelect2IfExists(selector){
+  if(window.jQuery && $(selector).data('select2')){
+    $(selector).select2('destroy');
+  }
+}
+
+let abortYear = null, abortModel = null;
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  const sifirAracCheckbox = document.getElementById("key_156");
+  const key79Input = document.getElementById("key_79_input");
+  const sorgulaBtn = document.getElementById("sorgulaKey79Btn");
+  const key85 = document.getElementById("key_85");
+  const key81 = document.getElementById("key_81");
+  const key88 = document.getElementById("key_88");
+  const key80 = document.getElementById("key_80");   // Model kodu input
+  const key82 = document.getElementById("key_82");
+  const yilKod = key88.value;  // Ör: "024"
+  const yilLabel = key88.options[key88.selectedIndex]?.text || "";  // Ör: "2024"
+
+
+
+  // Input ve butonun aktif/pasif durumu
+  function updateKey79State() {
+    if (sifirAracCheckbox && key79Input && sorgulaBtn) {
+      if (sifirAracCheckbox.checked) {
+        key79Input.readOnly = true;
+        key79Input.style.backgroundColor = "#e9ecef";
+        sorgulaBtn.disabled = true;
+        sorgulaBtn.classList.add("disabled");
+      } else {
+        key79Input.readOnly = false;
+        key79Input.style.backgroundColor = "";
+        sorgulaBtn.disabled = false;
+        sorgulaBtn.classList.remove("disabled");
+      }
+    }
+  }
+
+  if (sifirAracCheckbox && key79Input && sorgulaBtn) {
+    sifirAracCheckbox.addEventListener("change", updateKey79State);
+    updateKey79State(); // Sayfa ilk yüklendiğinde de uygula
+  }
+
+  // Sorgula butonuna tıklanınca servis isteği
+  if (sorgulaBtn) {
+    sorgulaBtn.addEventListener("click", async function() {
+      const plaka = document.querySelector('[name="key_77"]').value.trim();
+      const belgeSeri = document.querySelector('[name="key_79"]').value.trim();
+
+      if (!plaka || !belgeSeri) {
+        showPopup("Plaka ve belge seri alanı boş olamaz!", "Eksik Bilgi");
+        return;
+      }
+
+      // CSRF token fonksiyonu (kopyala-yapıştır)
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      try {
+        const res = await fetch("/gateway/egm-ray/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          body: JSON.stringify({
+            proposal_id: proposal_id,
+            product_code: product_code,
+            key_77: plaka,
+            key_79: belgeSeri
+          })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          showPopup(data.error || "Servis hatası", "Hata");
+          return;
+        }
+
+        // Sonuçları inputlara yaz
+        const motorInput = document.querySelector('[name="key_89"]');
+        const sasiInput = document.querySelector('[name="key_90"]');
+        if (motorInput) motorInput.value = data.motor_no || "";
+        if (sasiInput) sasiInput.value = data.sasi_no || "";
+
+        showPopup("Sorgulama başarılı! Motor ve şasi numaraları dolduruldu.", "Başarılı", "success");
+
+      } catch (err) {
+        showPopup("Servis hatası: " + err, "Hata");
+      }
+    });
+  }
+
+
+
+   // --- MARKA LİSTESİ YÜKLE (Açılışta) ---
+  fetch("/gateway/get-arac-markalari/", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (key81 && data.success && Array.isArray(data.brands)) {
+      key81.innerHTML = '<option value="">Seçiniz</option>';
+      data.brands.forEach(brand => {
+        key81.innerHTML += `<option value="${brand.code}">${brand.name}</option>`;
+      });
+      if (window.jQuery) {
+        destroySelect2IfExists('#key_81');
+        $('#key_81').select2({
+          placeholder: 'Marka Seçiniz',
+          allowClear: true,
+          width: '100%',
+          dropdownParent: $('#key_81').parent()
+        });
+      }
+    } else if (key81) {
+      key81.innerHTML = '<option value="">Marka bulunamadı</option>';
+    }
+  })
+  .catch(err => {
+    if (key81) key81.innerHTML = '<option value="">Hata oluştu</option>';
+    showGlobalModalPopup("Marka listesi alınamadı: " + err, { type: "error", title: "Hata" });
+  });
+
+  // --- Select2 başlat ---
+  if (window.jQuery) {
+    $('#key_85,#key_81').select2({width:"100%",placeholder:"Seçiniz",allowClear:true});
+    $('#key_88,#key_82').select2({width:"100%",placeholder:"Seçiniz",allowClear:true});
+  }
+
+  // --- TARZ & MARKA seçildikçe model yılı servisini tetikle ---
+  function handleTarzMarkaChange() {
+    const t = key85 ? key85.value : "";
+    const m = key81 ? key81.value : "";
+    if(t && m) loadModelYears(t, m);
+    else {
+      clearSelect(key88, "Model Yılı");
+      clearSelect(key82, "Araç Modeli");
+      if (key80) key80.value = "";
+    }
+  }
+
+  if (window.jQuery) {
+    $('#key_85,#key_81').on('change', handleTarzMarkaChange);
+  } else {
+    if (key85) key85.addEventListener('change', handleTarzMarkaChange);
+    if (key81) key81.addEventListener('change', handleTarzMarkaChange);
+  }
+
+  // --- MODEL YILı seçilince araç modeli servisi tetiklenir ---
+  if (window.jQuery) {
+    $('#key_88').on('change', function(){
+      const t = key85 ? key85.value : "";
+      const m = key81 ? key81.value : "";
+      const y = key88 ? key88.value : "";
+      if(t && m && y) loadModelList(t, m, y);
+      else clearSelect(key82,"Araç Modeli");
+    });
+  } else if (key88) {
+    key88.addEventListener('change', function(){
+      const t = key85 ? key85.value : "";
+      const m = key81 ? key81.value : "";
+      const y = key88 ? key88.value : "";
+      if(t && m && y) loadModelList(t, m, y);
+      else clearSelect(key82,"Araç Modeli");
+    });
+  }
+
+  // --- Araç Modeli seçilince 80 inputunu doldur ---
+  if (key82) {
+    if (window.jQuery) {
+      $('#key_82').on('change', function(){
+        const sel = key82.options[key82.selectedIndex];
+        if (key80) key80.value = sel && sel.dataset.num ? sel.dataset.num : "";
+      });
+    } else {
+      key82.addEventListener('change', function(){
+        const sel = key82.options[key82.selectedIndex];
+        if (key80) key80.value = sel && sel.dataset.num ? sel.dataset.num : "";
+      });
+    }
+  }
+
+  // --- MODEL YIL SERVİSİ ---
+  async function loadModelYears(tarz, marka){
+    if(!key88 || !key82) return;
+    clearSelect(key88,"Model Yılı"); clearSelect(key82,"Araç Modeli"); if(key80) key80.value = "";
+    if(abortYear) abortYear.abort(); abortYear = new AbortController();
+    if(tarz==="1") tarz = "001"; else if(tarz==="4") tarz = "004";
+    const data = await fetch("/gateway/get-model-years/",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "X-CSRFToken":getCookie("csrftoken")
+      },
+      body:JSON.stringify({tarz_kodu:tarz,marka_kodu:marka}),
+      signal:abortYear.signal
+    }).then(r=>r.json()).catch(e=>{
+      if(e.name!=="AbortError")console.error(e);
+      return {success:false};
+    });
+    if(!data.success) return;
+    if(window.jQuery && $(key88).hasClass("select2-hidden-accessible")) $(key88).select2("destroy");
+    data.years.forEach(
+      y => key88.insertAdjacentHTML("beforeend", `<option value="${y.code}">${y.name}</option>`)
+    );
+    if(window.jQuery) {
+      $(key88).select2({width:"100%",placeholder:"Model Yılı",allowClear:true});
+    }
+  }
+
+  // --- MODEL SERVİSİ ---
+    async function loadModelList(tarz, marka, yil) {
+      if (!key82) return;
+      clearSelect(key82, "Araç Modeli"); if (key80) key80.value = "";
+      if (abortModel) abortModel.abort(); abortModel = new AbortController();
+      if (tarz === "1") tarz = "001"; else if (tarz === "4") tarz = "004";
+
+      // ← YANLIŞ: yilKod diye bir değişken yok!
+      // body: JSON.stringify({ tarz_kodu: tarz, marka_kodu: marka, yil_kodu: yilKod }),
+
+      // ← DOĞRU: fonksiyonun parametresi olan "yil" kullanılmalı
+      const data = await fetch("/gateway/get-arac-modelleri/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({ tarz_kodu: tarz, marka_kodu: marka, yil_kodu: yil }),
+        signal: abortModel.signal
+      }).then(r => r.json()).catch(e => {
+        if (e.name !== "AbortError") console.error(e);
+        return { success: false };
+      });
+
+      if (!data.success) return;
+      if (window.jQuery && $(key82).hasClass("select2-hidden-accessible")) $(key82).select2("destroy");
+      data.models.forEach(m => {
+        const [label, num = ""] = (m.name || "").split("|").map(s => s.trim());
+        key82.insertAdjacentHTML(
+          "beforeend",
+          `<option value="${m.code}" data-num="${num}">${label}</option>`
+        );
+      });
+      if (window.jQuery) {
+        $(key82).select2({ width: "100%", placeholder: "Araç Modeli", allowClear: true });
+      }
+    }
+
+// --- TEKLİF AL SUBMIT BUTTON ---
+document.addEventListener("DOMContentLoaded", function () {
+  const submitBtn = document.getElementById("submitOffer");
+
+  if (submitBtn) {
+    submitBtn.addEventListener("click", async function () {
+
+      // 1. Müşteri numaraları çözümlensin
+      if (typeof resolveCustomerNosBeforeSubmit === "function") {
+        await resolveCustomerNosBeforeSubmit();
+      }
+
+      // 2. Form verilerini topla
+      const data = getFullOfferFormData(true);
+
+      // 3. Yıl label'ını özel olarak al ve düzelt
+      const key88 = document.getElementById("key_88");
+      if (key88) {
+        const yilLabel = key88.options[key88.selectedIndex]?.text || "";
+        data["key_88"] = yilLabel; // Sadece yıl label'ı (ör: 2024)
+      }
+
+      // 4. Proposal ana kayıt + UUID alınır
+      const proposalCreateRes = await fetch("/proposal/create-proposal-entry/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+          customer_id: window.customer_id,
+          proposal_id: data.proposal_id,
+          product_code: data.product_code,
+          agency_id: window.agency_id,
+          user_id: window.user_id,
+          form_type: window.formType,
+          branch_id: window.branch_id || null,
+          form_data: data
+        }),
+      }).then(res => res.json());
+
+      if (!proposalCreateRes.success) {
+        console.error("❌ Proposal kayıt hatası:", proposalCreateRes.error);
+        return;
+      }
+
+      // 5. UUID ile yönlendirme
+      const uuids = proposalCreateRes.uuids || {};
+      const firstUuid = uuids[data.product_code];
+
+      if (firstUuid) {
+        showGlobalModalPopup(
+          "Teklif sayfasına yönlendiriliyorsunuz, lütfen bekleyiniz...",
+          { type: "info", title: "Yönlendiriliyorsunuz", autoClose: false }
+        );
+
+        const popupModal = document.getElementById("globalPopup");
+        const closeBtn = popupModal.querySelector(".btn-close");
+        if (closeBtn) closeBtn.style.display = "none";
+
+        setTimeout(() => {
+          window.location.href = `/proposal/${firstUuid}/`;
+        }, 500);
+      }
+
+      window.proposal_uuids = uuids;
+    });
+  }
+});
+
+
+</script>
+
+
+{% endblock %}
+
+
+
+

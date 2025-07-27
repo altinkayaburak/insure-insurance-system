@@ -1,0 +1,851 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% load custom_tags %}
+{% load humanize %}
+
+
+<style>
+
+  .summary-value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #343a40;
+  }
+
+  .summary-title {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.3rem;
+  }
+
+  .summary-change {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+
+  .sparkline {
+    height: 35px;
+    width: 100px;
+  }
+
+  .box-title {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+  }
+
+  .box-value {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #212529;
+  }
+
+    .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .year-selector {
+    width: 160px;
+  }
+
+  .summary-card .summary-title i {
+  cursor: pointer;
+}
+.summary-card {
+  padding: 12px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.05);
+  transition: all 0.2s ease-in-out;
+}
+.summary-card:hover {
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+</style>
+
+<div class="container mt-5 px-4">
+  <div class="row g-3">
+
+    <!-- 🔹 Sol: 4 Kutu + Grafik (col-9) -->
+  <div class="col-md-9">
+
+      <!-- 4 Kutu -->
+  <div class="row g-3">
+  <!-- 🔹 Brüt Prim -->
+  <div class="col-md-3">
+    <div class="summary-card">
+      <div>
+        <div class="summary-title">Brüt Prim</div>
+        <div class="summary-value" id="box-brut">₺0,00</div>
+      </div>
+      <div id="spark1" class="sparkline"></div>
+    </div>
+  </div>
+
+  <!-- 🔹 Net Prim -->
+  <div class="col-md-3">
+    <div class="summary-card">
+      <div>
+        <div class="summary-title">Net Prim</div>
+        <div class="summary-value" id="box-net">₺0,00</div>
+      </div>
+      <div id="spark2" class="sparkline"></div>
+    </div>
+  </div>
+
+  <!-- 🔹 Komisyon -->
+  <div class="col-md-3">
+    <div class="summary-card">
+      <div>
+        <div class="summary-title">Komisyon</div>
+        <div class="summary-value" id="box-komisyon">₺0,00</div>
+      </div>
+      <div id="spark3" class="sparkline"></div>
+    </div>
+  </div>
+
+  <!-- 🔹 Poliçe Adedi -->
+  <div class="col-md-3">
+    <div class="summary-card">
+      <div>
+        <div class="summary-title">Poliçe Adedi</div>
+        <div class="summary-value" id="box-adet">0</div>
+      </div>
+      <div id="spark4" class="sparkline"></div>
+    </div>
+  </div>
+</div>
+
+
+      <!-- 📊 Grafik + Açıklama -->
+
+<div class="bg-white rounded shadow-sm p-3 mt-4">
+  <div class="chart-header">
+    <h6 class="mb-0 text-dark fw-semibold">Aylık Üretim Grafiği</h6>
+    <select id="yearSelector" class="form-select form-select-sm year-selector">
+      <option value="all">Tüm Zamanlar</option>
+      {% for y in year_range %}
+        <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="monthly-sales-chart" style="min-height: 240px;"></div>
+</div>
+    </div>
+
+<!-- 🔸 Sağ: Pasta Grafik + Branş Yüzdeleri -->
+<div class="col-md-3">
+  <div class="bg-white rounded shadow-sm p-3 d-flex flex-column" style="min-height: 593px;">
+    <h6 class="mb-0 text-muted fw-semibold mb-2">Branş Dağılımı</h6>
+
+    <div id="branch-pie-chart" style="height: 220px;"></div>
+
+    <div id="branch-bars" class="mt-3">
+      <!-- JS ile dolacak: her bar sabit yüksekliğe sahip olacak -->
+    </div>
+  </div>
+</div>
+
+
+<!-- 🟢 1. Kutu: Yıllık Değişim -->
+<div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-1-wrapper">
+      <span id="box-extra-1" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-1-arrow" class="bi fs-3"></i>
+    </div>
+    <div id="box-extra-1-diff" class="fw-semibold small mb-2"></div>
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Yıllık Değişim</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="Yılbaşından bugüne kadar olan brüt primin geçen seneye göre aynı ayların toplam brüt değişimini gösterir."></i>
+    </div>
+  </div>
+</div>
+
+        <!-- 🧡 2. Kutu: Komisyon Değişimi -->
+<div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <!-- Yüzdelik değişim + ok -->
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-3-wrapper">
+      <span id="box-extra-3" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-3-arrow" class="bi fs-3"></i>
+    </div>
+
+    <!-- TL farkı -->
+    <div id="box-extra-3-diff" class="fw-semibold small mb-2"></div>
+
+    <!-- Başlık + bilgi simgesi -->
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Komisyon Değişimi</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="Yılbaşından bugüne kadar olan komisyon gelirinin geçen seneye göre aynı dönemdeki değişimini gösterir."></i>
+    </div>
+  </div>
+</div>
+
+      <!-- 🔵 3. Kutu: Poliçe Adet Değişimi -->
+<div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <!-- Yüzde ve Ok -->
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-4-wrapper">
+      <span id="box-extra-4" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-4-arrow" class="bi fs-3"></i>
+    </div>
+
+    <!-- Adet farkı -->
+    <div id="box-extra-4-diff" class="fw-semibold small mb-2">0</div>
+
+    <!-- Başlık + tooltip -->
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Adet Değişimi</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="Yılbaşından bugüne kadar olan poliçe adetinin geçen seneye göre aynı dönemdeki adet farkını gösterir."></i>
+    </div>
+  </div>
+</div>
+
+<!-- 🟡 4. Kutu: Aylık Değişim -->
+<div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-2-wrapper">
+      <span id="box-extra-2" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-2-arrow" class="bi fs-3"></i>
+    </div>
+    <div id="box-extra-2-diff" class="fw-semibold small mb-2"></div>
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Aylık Değişim</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="İçinde bulunduğun ayın geçen yıl aynı aya göre brüt prim değişimini gösterir."></i>
+    </div>
+  </div>
+</div>
+
+    <!-- 🟡 5. Kutu: Aylık komisyon Değişim -->
+<div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-5-wrapper">
+      <span id="box-extra-5" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-5-arrow" class="bi fs-3"></i>
+    </div>
+    <div id="box-extra-5-diff" class="fw-semibold small mb-2"></div>
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Komisyon (Ay)</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="İçinde bulunduğun ayın geçen yıl aynı aya göre komisyon değişimini gösterir."></i>
+    </div>
+  </div>
+</div>
+
+    <!-- 🟡 6. Kutu: Aylık komisyon Değişim -->
+    <div class="col-6 col-md-4 col-lg-2">
+  <div class="summary-card h-100 text-center d-flex flex-column justify-content-center">
+    <div class="summary-value d-flex justify-content-center align-items-center gap-1 mb-1" id="box-extra-6-wrapper">
+      <span id="box-extra-6" class="fs-4 fw-bold">0%</span>
+      <i id="box-extra-6-arrow" class="bi fs-3"></i>
+    </div>
+    <div id="box-extra-6-diff" class="fw-semibold small mb-2"></div>
+    <div class="summary-title d-flex justify-content-center align-items-center gap-1 mt-auto">
+      <span>Poliçe Adedi (Ay)</span>
+      <i class="bi bi-info-circle-fill text-muted small"
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         title="İçinde bulunduğun ayın geçen yıl aynı aya göre poliçe adet değişimini gösterir."></i>
+    </div>
+  </div>
+</div>
+
+
+<div class="container mt-2 px-7">
+  <div class="row">
+    <div class="col-md-12">
+      <div class="bg-white rounded shadow-sm p-3 mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0 text-dark fw-semibold">Branş Bazlı Aylık Üretim</h6>
+          <div class="d-flex align-items-center gap-2">
+            <select id="tableYearSelector" class="form-select form-select-sm year-selector">
+              <option value="all">Tüm Zamanlar</option>
+              {% for y in year_range %}
+                <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+              <button id="fetchBranchTableBtn"
+                      class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
+                      title="Getir" style="width: 38px; height: 38px;">
+                <i class="bi bi-arrow-repeat fs-5"></i>
+              </button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="overflow-x: auto;">
+          <table class="table table-bordered table-sm align-middle text-center small" style="min-width: 980px;">
+            <thead class="table-light">
+              <tr>
+                <th class="text-start px-2" style="min-width: 120px;">Branş</th>
+                {% for ay in turkish_months_short %}
+                  <th class="px-2">{{ ay }}</th>
+                {% endfor %}
+                <th class="px-2">Toplam</th>
+              </tr>
+            </thead>
+            <tbody id="branch-monthly-table-body">
+              <!-- JS ile dolacak -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div class="container mt-2 px-7">
+  <div class="bg-white rounded shadow-sm p-3 mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="mb-0 text-dark fw-semibold">Şirket Bazlı Aylık Üretim</h6>
+      <div class="d-flex align-items-center gap-2">
+        <!-- Yıl -->
+        <select id="companyYearSelector" class="form-select form-select-sm">
+          <option value="all">Tüm Zamanlar</option>
+          {% for y in year_range %}
+            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Branş -->
+        <select id="companyBranchSelector" class="form-select form-select-sm">
+          <option value="">Tüm Branşlar</option>
+          {% for branch in all_branches %}
+            <option value="{{ branch }}">{{ branch }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Getir butonu -->
+        <button id="getCompanyTableBtn" class="btn btn-sm btn-primary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+          <i class="bi bi-arrow-repeat fs-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="table-responsive" style="overflow-x: auto;">
+      <table class="table table-bordered table-sm align-middle text-center small" style="min-width: 980px;">
+        <thead class="table-light">
+          <tr>
+            <th class="text-center px-2" style="width: 75px;">Şirket</th>
+            {% for ay in turkish_months_short %}
+              <th class="px-2">{{ ay }}</th>
+            {% endfor %}
+            <th class="px-2">Toplam</th>
+          </tr>
+        </thead>
+        <tbody id="company-monthly-table-body">
+          <!-- JS ile dolacak -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const months = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+  ];
+
+  // 🔹 Ana Grafik
+ const mainChart = new ApexCharts(document.querySelector("#monthly-sales-chart"), {
+  chart: {
+    id: "main-chart",
+    height: 350,
+    type: "line",
+    stacked: false,
+    toolbar: { show: false }
+  },
+  stroke: {
+    width: [2, 2, 3],
+    curve: "smooth"
+  },
+  plotOptions: {
+    bar: {
+      columnWidth: "30%"
+    }
+  },
+  dataLabels: {
+    enabled: true,
+    enabledOnSeries: [0, 1, 2]
+  },
+  labels: months,
+  xaxis: {
+    type: "category",
+    categories: months
+  },
+  yaxis: [
+    {
+      seriesName: "Brüt Prim (TL)",
+      title: { text: "Prim (TL)" }
+    },
+    {
+      seriesName: "Komisyon (TL)",
+      show: false
+    },
+    {
+      seriesName: "Poliçe Adedi",
+      opposite: true,
+      title: { text: "Adet" }
+    }
+  ],
+  legend: {
+    position: "bottom",
+    horizontalAlign: "center"
+  },
+  tooltip: {
+    shared: true,
+    y: {
+      formatter: val => new Intl.NumberFormat("tr-TR").format(val)
+    }
+  },
+  series: [
+    {
+      name: "Brüt Prim (TL)",
+      type: "column",
+      data: Array(12).fill(0)
+    },
+    {
+      name: "Komisyon (TL)",
+      type: "column",
+      data: Array(12).fill(0)
+    },
+    {
+      name: "Poliçe Adedi",
+      type: "line",
+      yAxisIndex: 2,
+      data: Array(12).fill(0)
+    }
+  ]
+});
+mainChart.render();
+
+  // 🔹 Sparkline ayarları
+  let sparkCharts = [];
+  const sparkOpts = (data) => ({
+    series: [{ data }],
+    chart: {
+      type: "area",
+      height: 35,
+      sparkline: { enabled: true }
+    },
+    stroke: { curve: "smooth", width: 2 },
+    fill: { opacity: 0.3 },
+    tooltip: { enabled: false }
+  });
+
+  function renderSparklines(data) {
+    sparkCharts.forEach(c => c.destroy());
+    sparkCharts = [];
+
+    const chart1 = new ApexCharts(document.querySelector("#spark1"), sparkOpts(data.chart.brut_values));
+    const chart2 = new ApexCharts(document.querySelector("#spark2"), sparkOpts(data.chart.brut_values.map(x => x * 0.8)));
+    const chart3 = new ApexCharts(document.querySelector("#spark3"), sparkOpts(data.chart.brut_values.map(x => x * 0.15)));
+    const chart4 = new ApexCharts(document.querySelector("#spark4"), sparkOpts(data.chart.adet_values));
+
+    chart1.render(); chart2.render(); chart3.render(); chart4.render();
+    sparkCharts.push(chart1, chart2, chart3, chart4);
+  }
+
+// 🔹 Dashboard kutularını günceller: toplamlar + yıllık, aylık ve komisyon kıyaslamaları
+function updateBoxes(data) {
+  // 🎯 Toplam kutuları
+  document.querySelector("#box-brut").textContent = formatCurrency(data.summary.brut_total);
+  document.querySelector("#box-net").textContent = formatCurrency(data.summary.net_total);
+  document.querySelector("#box-komisyon").textContent = formatCurrency(data.summary.komisyon_total);
+  document.querySelector("#box-adet").textContent = data.summary.policy_count.toLocaleString("tr-TR");
+
+  // ✅ 1️⃣ Yıllık değişim kutusu
+  if (data.comparison) {
+    const percent = parseFloat(data.comparison.percent_change || 0);
+    const isPositive = data.comparison.is_increase;
+    const diff = parseFloat(data.comparison.difference || 0);
+
+    const box = document.querySelector("#box-extra-1");
+    const arrowIcon = document.querySelector("#box-extra-1-arrow");
+    const diffText = document.querySelector("#box-extra-1-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = formatCurrency(diff);
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+
+  // ✅ 2️⃣ Aylık değişim kutusu
+  if (data.comparison?.monthly_percent_change !== undefined) {
+    const percent = parseFloat(data.comparison.monthly_percent_change || 0);
+    const isPositive = data.comparison.monthly_is_increase;
+    const diff = parseFloat(data.comparison.monthly_difference || 0);
+
+    const box = document.querySelector("#box-extra-2");
+    const arrowIcon = document.querySelector("#box-extra-2-arrow");
+    const diffText = document.querySelector("#box-extra-2-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = formatCurrency(diff);
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+
+  // ✅ 3️⃣ Komisyon değişim kutusu
+  if (data.comparison?.commission_percent_change !== undefined) {
+    const percent = parseFloat(data.comparison.commission_percent_change || 0);
+    const isPositive = data.comparison.commission_is_increase;
+    const diff = parseFloat(data.comparison.commission_difference || 0);
+
+    const box = document.querySelector("#box-extra-3");
+    const arrowIcon = document.querySelector("#box-extra-3-arrow");
+    const diffText = document.querySelector("#box-extra-3-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = formatCurrency(diff);
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+
+    // ✅ 4️⃣ Poliçe adet değişim kutusu
+  if (data.comparison?.adet_percent_change !== undefined) {
+    const percent = parseFloat(data.comparison.adet_percent_change || 0);
+    const isPositive = data.comparison.adet_is_increase;
+    const diff = parseFloat(data.comparison.adet_difference || 0);
+
+    const box = document.querySelector("#box-extra-4");
+    const arrowIcon = document.querySelector("#box-extra-4-arrow");
+    const diffText = document.querySelector("#box-extra-4-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = `${diff.toLocaleString("tr-TR")} adet`;
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+
+  // ✅ 5️⃣ Aylık Komisyon Değişim Kutusu
+  if (data.comparison?.commission_monthly_percent_change !== undefined) {
+    const percent = parseFloat(data.comparison.commission_monthly_percent_change || 0);
+    const isPositive = data.comparison.commission_monthly_is_increase;
+    const diff = parseFloat(data.comparison.commission_monthly_difference || 0);
+
+    const box = document.querySelector("#box-extra-5");
+    const arrowIcon = document.querySelector("#box-extra-5-arrow");
+    const diffText = document.querySelector("#box-extra-5-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = formatCurrency(diff);
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+
+    // ✅ 6️⃣ Aylık Poliçe Adedi Değişimi Kutusu
+  if (data.comparison?.adet_monthly_percent_change !== undefined) {
+    const percent = parseFloat(data.comparison.adet_monthly_percent_change || 0);
+    const isPositive = data.comparison.adet_monthly_is_increase;
+    const diff = parseFloat(data.comparison.adet_monthly_difference || 0);
+
+    const box = document.querySelector("#box-extra-6");
+    const arrowIcon = document.querySelector("#box-extra-6-arrow");
+    const diffText = document.querySelector("#box-extra-6-diff");
+
+    box.textContent = `${Math.abs(percent).toFixed(1)}%`;
+    arrowIcon.className = isPositive
+      ? "bi bi-arrow-up-short text-success fs-1"
+      : "bi bi-arrow-down-short text-danger fs-1";
+    diffText.textContent = `${diff.toLocaleString("tr-TR")} adet`;
+    diffText.className = isPositive
+      ? "text-success fw-semibold mt-1 small"
+      : "text-danger fw-semibold mt-1 small";
+  }
+}
+
+// ✅ Tooltip'leri aktif hale getir
+document.addEventListener("DOMContentLoaded", function () {
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+
+
+
+  // 🔹 Pasta grafik ve barlar
+  const pieColors = ["#0d6efd", "#198754", "#6f42c1", "#dc3545", "#ffc107", "#20c997", "#6610f2"];
+  let pieChart = null;
+
+  function renderPie(data) {
+    if (pieChart) pieChart.destroy();
+    pieChart = new ApexCharts(document.querySelector("#branch-pie-chart"), {
+      chart: { type: "donut", height: 220 },
+      series: data.pie.values,
+      labels: data.pie.labels,
+      colors: pieColors,
+      legend: { show: false },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "50%"  // 🍩 Kalınlığı artırmak için burayı büyüt
+          }
+        }
+      }
+    });
+    pieChart.render();
+
+    const container = document.querySelector("#branch-bars");
+    container.innerHTML = "";
+    data.pie.labels.forEach((label, idx) => {
+      const percentage = data.pie.percentages[idx];
+      const color = pieColors[idx % pieColors.length];
+      const item = `
+        <div class="row align-items-center mb-2">
+          <div class="col-5 small text-muted">
+            <i class="mdi mdi-circle me-1" style="color: ${color}"></i> ${label}
+          </div>
+          <div class="col-7">
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-opacity-75" style="width: ${percentage}%; background-color: ${color};"></div>
+            </div>
+          </div>
+        </div>`;
+      container.insertAdjacentHTML("beforeend", item);
+    });
+  }
+
+  // 🔹 Dashboard'u güncelle
+  async function updateAll(year) {
+    try {
+      const res = await fetch(`/dashboard/combined-data/?year=${year}`);
+      const data = await res.json();
+
+      ApexCharts.exec("main-chart", "updateSeries", [
+        {
+          name: "Brüt Prim (TL)",
+          type: "column",
+          data: data.chart.brut_values
+        },
+        {
+          name: "Komisyon (TL)",
+          type: "column",
+          data: data.chart.komisyon_values
+        },
+        {
+          name: "Poliçe Adedi",
+          type: "line",
+          yAxisIndex: 2,
+          data: data.chart.adet_values
+        }
+      ]);
+
+      updateBoxes(data);
+      renderSparklines(data);
+      renderPie(data);
+    } catch (err) {
+      console.error("Veri alınamadı:", err);
+    }
+  }
+
+  // 🔹 Sayfa ilk yüklenince ve yıl değişince tetikleme
+  const yearSelector = document.querySelector("#yearSelector");
+  updateAll(yearSelector.value);
+  yearSelector.addEventListener("change", function () {
+    updateAll(this.value);
+  });
+
+  // 🔹 Para biçimleyici
+  function formatCurrency(val) {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      minimumFractionDigits: 2
+    }).format(val);
+  }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const tableBody = document.getElementById("branch-monthly-table-body");
+  const yearSelector = document.getElementById("tableYearSelector");
+  const fetchBtn = document.getElementById("fetchBranchTableBtn");
+
+  const iconMap = {
+    "Kasko":        { icon: "bi bi-car-front",         color: "text-primary" },
+    "Trafik":       { icon: "bi bi-sign-stop",         color: "text-danger" },
+    "DASK":         { icon: "bi bi-house",             color: "text-warning" },
+    "Sağlık":       { icon: "bi bi-heart-pulse",       color: "text-success" },
+    "Konut":        { icon: "bi bi-building",          color: "text-info" },
+    "Ferdi Kaza":   { icon: "bi bi-person-exclamation",color: "text-secondary" },
+    "İşyeri":       { icon: "bi bi-briefcase",         color: "text-dark" },
+    "Nakliyat":     { icon: "bi bi-truck",             color: "text-muted" },
+    "Sorumluluk":   { icon: "bi bi-shield-check",      color: "text-primary" },
+    "Bilinmeyen":   { icon: "bi bi-question-circle",   color: "text-muted" }
+  };
+
+  function renderBranchMonthlyTable(data) {
+    tableBody.innerHTML = "";
+
+    data.forEach(row => {
+      const { icon, color } = iconMap[row.branch] || { icon: "bi bi-shield", color: "text-muted" };
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="text-start fw-semibold px-2">
+          <i class="${icon} me-1 ${color}"></i> ${row.branch}
+        </td>`;
+
+      row.values.forEach(cell => {
+        const brut = cell.brut > 0 ? cell.brut.toLocaleString("tr-TR") : "-";
+        const adet = cell.adet > 0 ? cell.adet.toLocaleString("tr-TR") : "-";
+        tr.innerHTML += `
+          <td class="px-2">
+            <div>${brut}</div>
+            <div class="small text-muted">${adet}</div>
+          </td>`;
+      });
+
+      const totalBrut = row.total.brut > 0 ? row.total.brut.toLocaleString("tr-TR") : "-";
+      const totalAdet = row.total.adet > 0 ? row.total.adet.toLocaleString("tr-TR") : "-";
+      tr.innerHTML += `
+        <td class="px-2">
+          <div class="fw-semibold">${totalBrut}</div>
+          <div class="small text-muted">${totalAdet}</div>
+        </td>`;
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function fetchBranchTable() {
+    const year = yearSelector.value;
+    const url = new URL("/dashboard/branch-monthly-table-data/", window.location.origin);
+    url.searchParams.append("year", year);
+
+    const res = await fetch(url);
+    const json = await res.json();
+    renderBranchMonthlyTable(json.data);
+  }
+
+  // 🔹 Açılışta sadece satırları getir
+  const currentYear = new Date().getFullYear();
+  fetch(`/dashboard/branch-monthly-table-data/?year=${currentYear}&empty=1`)
+    .then(res => res.json())
+    .then(json => renderBranchMonthlyTable(json.data));
+
+  // 🔹 Getir butonu ile verileri çağır
+  fetchBtn.addEventListener("click", fetchBranchTable);
+});
+</script>
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const tableBody = document.getElementById("company-monthly-table-body");
+  const yearSelector = document.getElementById("companyYearSelector");
+  const branchSelector = document.getElementById("companyBranchSelector");
+  const fetchBtn = document.getElementById("getCompanyTableBtn");
+
+  function renderCompanyMonthlyTable(data) {
+    tableBody.innerHTML = "";
+
+    data.forEach(row => {
+      const tr = document.createElement("tr");
+
+      const logo = `
+        <div class="d-flex align-items-center justify-content-center" style="width: 75px; height: 75px;">
+          <img src="/static/logos/${row.code}.png" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+        </div>`;
+      tr.innerHTML = `<td class="px-2 text-center">${logo}</td>`;
+
+      row.values.forEach(cell => {
+        const brut = cell.brut > 0 ? cell.brut.toLocaleString("tr-TR") : "-";
+        const adet = cell.adet > 0 ? cell.adet.toLocaleString("tr-TR") : "-";
+        tr.innerHTML += `
+          <td class="px-2">
+            <div>${brut}</div>
+            <div class="small text-muted">${adet}</div>
+          </td>`;
+      });
+
+      const totalBrut = row.total.brut > 0 ? row.total.brut.toLocaleString("tr-TR") : "-";
+      const totalAdet = row.total.adet > 0 ? row.total.adet.toLocaleString("tr-TR") : "-";
+      tr.innerHTML += `
+        <td class="px-2">
+          <div class="fw-semibold">${totalBrut}</div>
+          <div class="small text-muted">${totalAdet}</div>
+        </td>`;
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function fetchCompanyTable(empty = false) {
+    const year = yearSelector.value;
+    const branch = branchSelector.value;
+
+    const url = new URL("/dashboard/company-branch-monthly-summary/", window.location.origin);
+    url.searchParams.append("year", year);
+    if (branch) url.searchParams.append("branch", branch);
+    if (empty) url.searchParams.append("empty", "1");
+
+    const res = await fetch(url);
+    const json = await res.json();
+    renderCompanyMonthlyTable(json.data);
+  }
+
+  // Açılışta boş verileri getir
+  fetchCompanyTable(true);
+
+  // Getir butonuna basınca gerçek verileri çek
+  fetchBtn.addEventListener("click", () => fetchCompanyTable(false));
+});
+</script>
+
+
+
+
+{% endblock %}

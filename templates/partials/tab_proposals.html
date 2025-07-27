@@ -1,0 +1,156 @@
+{% load custom_tags %}
+
+<style>
+/* Tabloda sadece yatay çizgiler: */
+.table thead th, .table tbody td {
+  border-left: none !important;
+  border-right: none !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+/* Sadece üstte ve altta çizgi */
+.table th, .table td {
+  border-top: 1px solid #dee2e6 !important;
+  border-bottom: 1px solid #dee2e6 !important;
+}
+/* Satırlar arası ekstra yatay çizgi efekti */
+.table tbody tr:not(:last-child) {
+  border-bottom: 1.5px solid #e6e6e6 !important;
+}
+
+/* Tablo başlığı ve gövdesi ortalı */
+.table thead th, .table tbody td {
+  text-align: center !important;
+}
+
+/* Sekme ile tablo arasında boşluk */
+.tab-content > .tab-pane {
+  margin-top: 44px;  /* örn: 24px boşluk */
+}
+
+.pagination .page-link {
+  background-color: #fffff;
+  color: #d64a42;
+  border: none;
+  margin: 0 2px;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #d64a42;
+  color: white;
+  border: none;
+}
+
+.pagination .page-link:hover {
+  background-color: #f8d7da;
+  color: #d64a42;
+}
+
+</style>
+
+<!-- Teklifler Tablosu -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2" id="scrollable-table">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Başlangıç</th>
+            <th>Teklif Tarihi</th>
+            <th>Ürün</th>
+            <th>Temsilci</th>
+            <th>Şube</th>
+            <th>Uavt/Plaka</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for offer in page_obj %}
+          <tr>
+            <td>
+              {% if uuid_map|get_item:offer.proposal_id %}
+                <a href="{% url 'proposal_detail_page' uuid_map|get_item:offer.proposal_id %}">
+                  {{ offer.proposal_id }}
+                </a>
+              {% else %}
+                {{ offer.proposal_id|default:"-" }}
+              {% endif %}
+            </td>
+            <td>{{ offer.policy_start_date|date:"d.m.Y" }}</td>
+            <td>{{ offer.created_at|date:"d.m.Y H:i" }}</td>
+            <td>
+              {% if offer.policy_branch %}
+                {{ offer.policy_branch.name }}
+              {% else %}
+                {{ branch_map|get_item:offer.product_code|default:offer.product_code }}
+              {% endif %}
+            </td>
+            <td>
+              {% if offer.created_by %}
+                {{ offer.created_by.get_full_name|title|default:"-" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if offer.branch %}
+                {{ offer.branch.name|default:"-" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {{ offer.property_identifier|default:"-" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">Teklif bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-3 mb-2">
+  <ul class="pagination pagination-sm mb-0">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="loadProposalPage(1); return false;">«</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="loadProposalPage({{ page_obj.previous_page_number }}); return false;">‹</a>
+      </li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <a class="page-link" href="#" onclick="loadProposalPage({{ num }}); return false;">{{ num }}</a>
+        </li>
+      {% elif num == 1 or num == page_obj.paginator.num_pages %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <a class="page-link" href="#" onclick="loadProposalPage({{ num }}); return false;">{{ num }}</a>
+        </li>
+      {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+        <li class="page-item disabled">
+          <span class="page-link">...</span>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="loadProposalPage({{ page_obj.next_page_number }}); return false;">›</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="#" onclick="loadProposalPage({{ page_obj.paginator.num_pages }}); return false;">»</a>
+      </li>
+    {% endif %}
+  </ul>
+</div>
+{% endif %}

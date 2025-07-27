@@ -1,0 +1,507 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+.extra-insured-card {
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 11px;
+  min-height: 36px;
+  box-shadow: 0 1px 6px 0 rgba(39,44,49,0.04);
+  transition: box-shadow 0.2s;
+  font-size: 0.97rem;
+}
+.extra-insured-card:hover {
+  box-shadow: 0 2px 8px 0 rgba(39,44,49,0.10);
+}
+.extra-insured-card .btn-close {
+  font-size: 0.8rem;
+  margin-left: 8px;
+  margin-right: -2px;
+}
+.product-form-header{display:flex;align-items:center;gap:1.1rem;margin-bottom:1.5rem;margin-top:0.8rem;margin-left:0.1rem;}.product-form-header .icon-circle{background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;height:48px;width:48px;box-shadow:0 2px 10px rgba(48,87,199,.08);}
+
+</style>
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+
+<div class="container mt-3">
+      <!-- Form Ürün Başlığı -->
+<div class="product-form-header align-items-center mb-3" style="gap:1.1rem; margin-top: 0.8rem; margin-left: 0.1rem;">
+  <span class="icon-circle shadow-sm bg-white d-flex align-items-center justify-content-center" style="height:48px;width:48px;border-radius:50%;">
+    <img src="{% static 'img/health.png' %}" alt="Saglik" style="width:28px;height:28px;">
+  </span>
+  <span class="fw-bold" style="font-size:1.20rem; color:#3057c7;">
+    Sağlık
+  </span>
+</div>
+
+  <div class="row g-4">
+
+<!-- 1. Kutu: Sigortalı & Sigorta Ettiren -->
+<div class="col-md-3">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-white py-2">
+  <div class="d-flex align-items-center">
+    <div class="icon-circle p-2 rounded-circle me-2" style="background-color: rgba(214, 74, 66, 0.1);">
+      <img src="{% static 'img/user_detail.png' %}" alt="User Icon" style="width: 20px; height: 18px;">
+    </div>
+    <h6 class="mb-0 fw-semibold" style="color: #d64a42; font-size: 0.9rem;">
+      Sigortalı Bilgileri
+    </h6>
+  </div>
+</div>
+<div class="card-body p-3">
+          <form id="sigortaliForm">
+            {% for key in blocks.sigortali %}
+              {% if key.id == 33 %}
+                <!-- Toggle Switch: Sigorta Ettiren Alanı Aç/Kapat -->
+                <div class="form-check form-switch mb-2">
+                <input type="checkbox"
+                       class="form-check-input sigorta-ettiren-toggle"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       {% if selected_ettiren %}checked{% endif %}>
+                  <label class="form-check-label small" for="key_{{ key.id }}">{{ key.description }}</label>
+                </div>
+              {% else %}
+                <!-- Diğer readonly alanlar -->
+                <div class="mb-2">
+                  <label class="form-label small">{{ key.description }}</label>
+                  <input type="{% if key.input_type == 'date' %}date{% else %}text{% endif %}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if key.name == 'SigortaliDogumTarihi' and customer.birth_date %}{{ customer.birth_date|date:'Y-m-d' }}{% elif key.name == 'SigortaliAdi' %}{{ customer.full_name }}{% elif key.name == 'SigortaliKimlikNo' %}{{ customer.identity_number }}{% elif key.name == 'SigortaliCepTelefonu' %}{{ primary_phone|default:'' }}{% endif %}"
+                         readonly style="background-color: #e9ecef;">
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            <!-- Sigorta Ettiren Alanı (toggle ile açılır) -->
+           <div id="sigortaEttirenFields" class="mt-3 pt-2 border-top {% if not selected_ettiren %}d-none{% endif %}">
+            {% for key in blocks.sigorta_ettiren %}
+              <div class="mb-2">
+                <label class="form-label small">{{ key.description }}</label>
+
+           {% if key.name == 'SigortaEttirenAdi' %}
+              <input type="text"
+                       class="form-control"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       value="{% if selected_ettiren %}{{ selected_ettiren.full_name }}{% endif %}"
+                       readonly style="background-color: #e9ecef;">
+
+                {% elif key.name == 'SigortaEttirenKimlikNo' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.identity_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+
+                {% elif key.name == 'SigortaEttirenDogumTarihi' %}
+                  <div class="mb-2">
+                    <input type="text"
+                           class="form-control"
+                           name="key_{{ key.id }}"
+                           id="sigortaEttirenDogumTarihi"
+                           value="{% if selected_ettiren %}{{ selected_ettiren.birth_date }}{% endif %}"
+                           {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                  </div>
+                {% elif key.name == 'SigortaEttirenCepTelefonu' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.phone_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+                {% else %}
+                  <!-- Varsayılan input (ekstra alanlar varsa) -->
+                  <input type="{{ key.input_type }}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+<!-- 2. Ek Sigortalı -->
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-primary bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/user_detail.png' %}" alt="Ek Sigortalı Icon" class="img-fluid" style="width: 20px; height: 18px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-primary" style="font-size: 0.9rem;">
+          Ek Sigortalı Bilgileri
+        </h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+
+      <!-- Ek Sigortalı Ekleme Formu -->
+        <form id="extraInsuredForm" autocomplete="off">
+          <div class="mb-2">
+            <label class="form-label small">İsim Soyisim</label>
+            <input type="text" class="form-control" id="extra_fullname_input" readonly style="background-color:#e9ecef;">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">TC Kimlik No</label>
+            <input type="text" class="form-control" id="extra_tc_input" maxlength="11" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Doğum Tarihi</label>
+            <input type="date" class="form-control" id="extra_birthdate_input" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">İlişki Türü</label>
+            <select class="form-select" id="extra_relation_input" required>
+              <option value="">Seçiniz</option>
+              <option value="Eş">Eş</option>
+              <option value="Çocuk">Çocuk</option>
+            </select>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-outline-info btn-sm flex-grow-1" id="sorgulaBtn">
+              <i class="bi bi-search"></i> Sorgula
+            </button>
+            <button type="button" class="btn btn-primary btn-sm flex-grow-1" id="kaydetBtn">
+              <i class="bi bi-save"></i> Kaydet
+            </button>
+          </div>
+        </form>
+        <div id="extraInsuredList" class="mt-2"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 3. Kutu: Poliçe Bilgileri (Key 144-50-52, home.html ile aynı stil ve fonksiyon) -->
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-info bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/list_detail.png' %}" alt="Poliçe Icon" class="img-fluid" style="width: 18px; height: 16px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-info" style="font-size: 0.9rem;">Poliçe Bilgileri</h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+      <!-- 144: Yenileme/Geçiş -->
+      <div class="form-check form-switch mb-3">
+        <input type="checkbox" class="form-check-input" name="key_144" id="key_144" value="1">
+        <label class="form-check-label small" for="key_144">Yenileme/Geçiş</label>
+      </div>
+      <!-- Önceki Sigorta Şirketi -->
+      <div class="mb-2">
+        <label class="form-label small" for="prev_company">Önceki Sigorta Şirketi</label>
+        <select class="form-select" name="prev_company" id="prev_company" required disabled>
+          <option value="">Seçiniz</option>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Önceki Poliçe Numarası -->
+      <div class="mb-2">
+        <label class="form-label small" for="prev_policy_no">Önceki Poliçe Numarası</label>
+        <input type="text"
+               class="form-control"
+               name="prev_policy_no"
+               id="prev_policy_no"
+               value=""
+               readonly style="background-color: #e9ecef;">
+      </div>
+      <!-- 219: Hastalık Şikayeti Var mı? -->
+      <div class="form-check form-switch mt-4 mb-2">
+        <input type="checkbox" class="form-check-input" name="key_219" id="key_219" value="1">
+        <label class="form-check-label small" for="key_219">Mevcut Tanı/Hastalık Var</label>
+      </div>
+      <!-- Mevcut Hastalık Bilgisi Alanı -->
+      <div class="mb-2 d-none" id="hastalikBilgisiWrapper">
+        <label class="form-label small" for="hastalik_bilgisi">Mevcut Hastalık Bilgisi</label>
+        <textarea class="form-control" name="hastalik_bilgisi" id="hastalik_bilgisi" rows="8" placeholder="Mevcut hastalıklarınızı yazınız..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 4. Kutu: Teklif Bilgileri -->
+<div class="col-md-3">
+<div class="card shadow-sm border-0">
+<div class="card-header bg-white py-2">
+  <div class="d-flex align-items-center">
+    <div class="icon-circle bg-warning bg-opacity-10 p-2 rounded-circle me-2">
+      <img src="{% static 'img/list_detail.png' %}" alt="Teklif Icon" class="img-fluid" style="width: 18px; height: 16px;">
+    </div>
+    <h6 class="mb-0 fw-semibold text-warning" style="font-size: 0.9rem;">Teklif Bilgileri</h6>
+  </div>
+</div>
+<div class="card-body p-3">
+  {% for key in blocks.teklif %}
+    {% with input_id="teklif_key_"|add:key.id|stringformat:"s" %}
+    <div class="mb-2">
+      <label class="form-label small" for="{{ input_id }}">{{ key.description }}</label>
+      {% if key.input_type == "select" or key.parameters|length > 0 %}
+        <select name="key_{{ key.id }}" id="{{ input_id }}" class="form-select">
+          <option value="">Seçiniz</option>
+          {% for param in key.parameters %}
+            <option value="{{ param.ParameterID }}">{{ param.ParameterName }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <input type="{{ key.input_type|default:'text' }}"
+               class="form-control"
+               name="key_{{ key.id }}"
+               id="{{ input_id }}"
+               {% if key.readonly %}readonly style="background-color: #e9ecef;"{% endif %}>
+      {% endif %}
+    </div>
+    {% endwith %}
+  {% endfor %}
+  <div class="mb-2 text-muted small mt-3">
+    <strong>Proposal ID:</strong> {{ proposal_id }}<br>
+    <strong>Ürün Kodu:</strong> {{ product_code }}
+  </div>
+  <div class="d-grid">
+    <button id="submitOffer" type="button" class="btn btn-primary btn-sm">Teklif Al</button>
+  </div>
+</div>
+</div>
+</div>
+
+  </div>
+</div>
+
+<!-- Sigortalı için -->
+<input type="hidden" name="key_204" id="key_204"> <!-- insuredNoAnkara -->
+<input type="hidden" name="key_205" id="key_205"> <!-- insuredNoBereket -->
+<input type="hidden" name="key_207" id="key_207"> <!-- insuredNoOrient -->
+<input type="hidden" name="key_206" id="key_206"> <!-- insuredNoUnico -->
+<input type="hidden" name="key_208" id="key_208"> <!-- insuredRay -->
+<input type="hidden" name="key_13" id="key_13" value="{{ customer.Cinsiyet }}">
+<input type="hidden" name="key_280" id="key_280" value="{{ age }}">
+
+
+<!-- Sigorta Ettiren için -->
+<input type="hidden" name="key_209" id="key_209"> <!-- CustomerNoAnkara -->
+<input type="hidden" name="key_210" id="key_210"> <!-- CustomerNoBereket -->
+<input type="hidden" name="key_212" id="key_212"> <!-- CustomerNoOrient -->
+<input type="hidden" name="key_211" id="key_211"> <!-- CustomerNoUnico -->
+<input type="hidden" name="key_213" id="key_213"> <!-- CustomerNoRay -->
+
+<script>
+  window.proposal_id = "{{ proposal_id }}";
+  window.product_code = "{{ product_code }}";
+  window.agency_id = "{{ request.user.agency.id }}";
+  window.user_id = "{{ request.user.id }}";
+  window.formType = "{{ form_type }}";
+  window.branch_id = "{{ request.user.branch.id }}";
+  window.customer_id = "{{ customer.id }}";    // <<< EKLE (customer objesi sayfada varsa!)
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // -- 1. Yenileme Toggle (Health) --
+  const yenilemeCheckbox = document.getElementById("key_144");
+  const prevCompany = document.getElementById("prev_company");
+  const prevPolicyNo = document.getElementById("prev_policy_no");
+  if (prevCompany) prevCompany.setAttribute("disabled", "disabled");
+  if (prevPolicyNo) {
+    prevPolicyNo.setAttribute("readonly", "readonly");
+    prevPolicyNo.style.backgroundColor = "#e9ecef";
+  }
+  if (yenilemeCheckbox && prevCompany && prevPolicyNo) {
+    yenilemeCheckbox.addEventListener("change", function () {
+      if (this.checked) {
+        prevCompany.disabled = false;
+        prevPolicyNo.readOnly = false;
+        prevPolicyNo.style.backgroundColor = "";
+      } else {
+        prevCompany.disabled = true;
+        prevCompany.value = "";
+        prevPolicyNo.readOnly = true;
+        prevPolicyNo.style.backgroundColor = "#e9ecef";
+        prevPolicyNo.value = "";
+      }
+    });
+  }
+
+  // -- 2. Hastalık Şikayet Toggle (Health) --
+  const hastalikCheckbox = document.getElementById("key_219");
+  const hastalikBilgisiWrapper = document.getElementById("hastalikBilgisiWrapper");
+  if (hastalikCheckbox && hastalikBilgisiWrapper) {
+    hastalikCheckbox.addEventListener("change", function () {
+      if (this.checked) {
+        hastalikBilgisiWrapper.classList.remove("d-none");
+      } else {
+        hastalikBilgisiWrapper.classList.add("d-none");
+        const hb = document.getElementById("hastalik_bilgisi");
+        if (hb) hb.value = "";
+      }
+    });
+  }
+
+  // -- 3. Teklif AL - Submit butonu
+  const submitBtn = document.getElementById("submitOffer");
+
+  if (submitBtn) {
+    submitBtn.addEventListener("click", async function () {
+      // 1. Müşteri numaralarını çözümle
+      await resolveCustomerNosBeforeSubmit();
+
+      // 2. Form verilerini topla
+      const data = getFullOfferFormData(true);
+
+      // 3. Proposal kayıt işlemi
+      const proposalCreateRes = await fetch("/proposal/create-proposal-entry/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+          customer_id: window.customer_id,
+          proposal_id: data.proposal_id,
+          product_code: data.product_code,
+          agency_id: window.agency_id,
+          user_id: window.user_id,
+          form_type: window.formType,
+          branch_id: window.branch_id || null,
+          form_data: data
+        }),
+      }).then(res => res.json());
+
+      if (!proposalCreateRes.success) {
+        console.error("❌ Proposal kayıt hatası:", proposalCreateRes.error);
+        return;
+      }
+
+      // 4. UUID ile detay sayfasına yönlen
+      const uuids = proposalCreateRes.uuids || {};
+      const firstUuid = uuids[data.product_code];
+
+      if (firstUuid) {
+        showGlobalModalPopup(
+          "Teklif sayfasına yönlendiriliyorsunuz, lütfen bekleyiniz...",
+          { type: "info", title: "Yönlendiriliyorsunuz", autoClose: false }
+        );
+
+        const popupModal = document.getElementById("globalPopup");
+        const closeBtn = popupModal.querySelector(".btn-close");
+        if (closeBtn) closeBtn.style.display = "none";
+
+        setTimeout(() => {
+          window.location.href = `/proposal/${firstUuid}/`;
+        }, 500);
+      }
+
+      window.proposal_uuids = uuids;
+    });
+  }
+
+  // -- 4. Ek Sigortalı: TC inputunda otomatik sorgula (input ve blur) --
+  const tcInput = document.getElementById("extra_tc_input");
+  if (tcInput) {
+    tcInput.addEventListener("input", function () {
+      if (this.value.trim().length === 11) {
+        document.getElementById("sorgulaBtn").click();
+      }
+    });
+    tcInput.addEventListener("blur", function () {
+      if (this.value.trim().length === 11) {
+        document.getElementById("sorgulaBtn").click();
+      }
+    });
+  }
+
+  // -- 5. Sorgula Butonu --
+  const sorgulaBtn = document.getElementById("sorgulaBtn");
+  if (sorgulaBtn) {
+    sorgulaBtn.addEventListener("click", function () {
+      const tc = document.getElementById("extra_tc_input").value.trim();
+      if (!tc || tc.length !== 11) {
+        showPopup("Lütfen geçerli bir T.C. Kimlik No giriniz.", "Uyarı");
+        return;
+      }
+      searchCustomerGeneric(tc, {
+        inputPrefix: "extra_",
+        showSave: false,
+        onFound: function (data) {
+          document.getElementById("extra_fullname_input").value = data.full_name || "";
+          document.getElementById("extra_fullname_input").readOnly = true;
+          document.getElementById("extra_fullname_input").style.backgroundColor = "#e9ecef";
+          if (data.birth_date) {
+            document.getElementById("extra_birthdate_input").value = convertToIsoDate(data.birth_date);
+          }
+        }
+      });
+    });
+  }
+
+  // -- 6. Ek Sigortalı Kaydet Butonu --
+  const kaydetBtn = document.getElementById("kaydetBtn");
+  if (kaydetBtn) {
+    kaydetBtn.addEventListener("click", function () {
+      const tc = document.getElementById("extra_tc_input").value.trim();
+      const ad = document.getElementById("extra_fullname_input").value.trim();
+      const dogum = document.getElementById("extra_birthdate_input").value.trim();
+      const ana_tc = document.querySelector('[name="key_1"]')?.value.trim();
+      const list = document.getElementById("extraInsuredList");
+
+      if (!tc || !ad || !dogum) {
+        showGlobalModalPopup("Tüm alanları doldurun ve önce sorgula yapın.", { type: "warning", title: "Eksik Bilgi" });
+        return;
+      }
+      if (tc.length === 10) {
+        showGlobalModalPopup("Kurumsal müşteri eklenemez.", { type: "warning", title: "Kural Hatası" });
+        return;
+      }
+      if (ana_tc && tc === ana_tc) {
+        showGlobalModalPopup("Sigortalı kendini ekleyemez.", { type: "warning", title: "Kural Hatası" });
+        return;
+      }
+      const existing = Array.from(list.querySelectorAll(".extra-insured-card")).find(el => el.dataset.tc === tc);
+      if (existing) {
+        showGlobalModalPopup("Bu kişi zaten eklendi.", { type: "warning", title: "Kural Hatası" });
+        return;
+      }
+
+      // -- Tüm kontroller geçti, ekle --
+      const item = document.createElement("div");
+      item.className = "extra-insured-card d-flex align-items-center px-3 py-2";
+      item.dataset.tc = tc;
+      item.innerHTML = `
+        <div class="flex-grow-1">
+          <span class="fw-semibold">${ad}</span>
+          <span class="badge rounded-pill bg-light border text-dark ms-2" style="font-size: 0.92em;">Ek Sigortalı</span>
+        </div>
+        <button type="button" class="btn-close ms-3" aria-label="Sil"></button>
+      `;
+      item.querySelector(".btn-close").onclick = function() { item.remove(); };
+      list.appendChild(item);
+
+      // Formu temizle
+      document.getElementById("extraInsuredForm").reset();
+      document.getElementById("extra_fullname_input").value = "";
+      document.getElementById("extra_fullname_input").readOnly = true;
+      document.getElementById("extra_fullname_input").style.backgroundColor = "#e9ecef";
+      document.getElementById("extra_birthdate_input").value = "";
+    });
+  }
+});
+</script>
+
+
+<script src="{% static 'js/utils_customer.js' %}"></script>
+{% endblock %}

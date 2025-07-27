@@ -1,0 +1,510 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  /* 🔵 Edit Butonu – #3057c7 */
+  .btn-blue {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    color: #fff !important;
+  }
+  .btn-blue:hover {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    opacity: 0.9;
+  }
+
+  /* 🔴 Template Butonu – #dc4a41 */
+  .btn-red {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: #fff !important;
+  }
+  .btn-red:hover {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    opacity: 0.9;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+   /* 📌 Modal Genel */
+  .modal-content {
+    border-radius: 0.75rem;
+    border: none;
+    background-color: #ffffff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-dialog.modal-xxl {
+    max-width: 90%;
+  }
+
+  .modal-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: #212529;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    color: #212529;
+    font-size: 14px;
+  }
+
+  .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
+  }
+
+  /* 🧾 Şablon textarea alanı */
+  .template-editor {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    height: 500px;
+    resize: vertical;
+  }
+
+  /* 🟧 Turuncu Kaydet Butonu */
+  .btn-save-orange {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.4rem;
+  }
+
+    .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  .modal-title {
+    font-size: 18px;
+  }
+
+
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+}
+
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+
+</style>
+
+
+<div class="container mt-5">
+  <!-- 🔼 Başlık ve Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Servis Listesi</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm" onclick="openAddModal()">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Servis
+    </button>
+  </div>
+
+  <!-- 🔍 Arama -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Servis ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- 📋 Tablo -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      <div class="table-responsive px-2">
+        <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+          <thead class="text-white" style="background-color: #7951aa;">
+            <tr>
+              <th>ID</th>
+              <th>Sigorta Şirketi</th>
+              <th>Servis Adı</th>
+              <th>SOAP Action</th>
+              <th class="text-center">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for service in page_obj %}
+            <tr>
+              <td>{{ service.id }}</td>
+              <td>{{ service.insurance_company.name }}</td>
+              <td>{{ service.service_name }}</td>
+              <td>{{ service.soap_action|truncatechars:50 }}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-blue" onclick="editService({{ service.id }})">Edit</button>
+                <button class="btn btn-sm btn-red" onclick="editTemplate({{ service.id }})">Template</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4">Servis bulunamadı.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔽 Sayfalama -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a>
+      </li>
+      {% endif %}
+      {% for num in page_range %}
+      {% if num == '...' %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+      <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+        <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="serviceModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <form id="serviceForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Add / Edit Service</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="service_id">
+          <div class="mb-3">
+            <label class="form-label">Insurance Company</label>
+            <select class="form-select" id="insurance_company" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Service Name</label>
+            <input type="text" class="form-control" id="service_name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">URL</label>
+            <input type="text" class="form-control" id="url" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">SOAP Action</label>
+            <input type="text" class="form-control" id="soap_action" required>
+          </div>
+        </div>
+        <div class="modal-footer bg-white">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-save-orange">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- SOAP Template Modal -->
+<div class="modal fade" id="soapTemplateModal" tabindex="-1">
+  <div class="modal-dialog modal-xxl">
+    <div class="modal-content">
+      <form id="soapTemplateForm">
+        <div class="modal-header">
+          <h5 class="modal-title">SOAP / Request Template Düzenle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="template_service_id">
+
+          <label class="form-label">SOAP Template</label>
+          <textarea id="soap_template" class="form-control template-editor mb-3" style="min-height:300px;"></textarea>
+
+          <label class="form-label">Request Template</label>
+          <textarea id="request_template" class="form-control template-editor" style="min-height:300px;"></textarea>
+        </div>
+        <div class="modal-footer bg-white">
+          <button type="submit" class="btn btn-save-orange">
+            <i class="bi bi-save me-1"></i> Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const API_SERVICES = '/database/services/';
+const API_COMPANIES = '/database/api/companies/';
+let companies = [];
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+async function fetchCompanies(selected = null) {
+    const response = await fetch(API_COMPANIES);
+    companies = await response.json();
+    const select = document.getElementById("insurance_company");
+    select.innerHTML = companies.map(c =>
+        `<option value="${c.id}" ${selected == c.id ? 'selected' : ''}>${c.name}</option>`
+    ).join("");
+}
+
+async function fetchServices() {
+    const response = await fetch(API_SERVICES);
+    const data = await response.json();
+    const tableBody = data.map(service => {
+        let soapAction = service.soap_action?.slice(0, 50) || '';
+        return `
+        <tr>
+            <td>${service.id}</td>
+            <td>${companies.find(c => c.id == service.insurance_company)?.name ?? 'Unknown'}</td>
+            <td>${service.service_name}</td>
+            <td>${soapAction}</td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editService(${service.id})">Edit</button>
+                <button class="btn btn-sm btn-info" onclick="editTemplate(${service.id})">Template</button>
+            </td>
+        </tr>`;
+    }).join("");
+
+    const tbody = document.querySelector("#serviceTableFull tbody");
+    tbody.innerHTML = tableBody;
+
+    if ($.fn.DataTable.isDataTable("#serviceTableFull")) {
+        $('#serviceTableFull').DataTable().destroy();
+    }
+
+    $('#serviceTableFull').DataTable({
+        pageLength: 12,
+    });
+}
+
+function openAddModal() {
+    document.getElementById("serviceForm").reset();
+    document.getElementById("service_id").value = "";
+    fetchCompanies();
+    const modal = new bootstrap.Modal(document.getElementById("serviceModal"));
+    modal.show();
+}
+
+async function editService(id) {
+    const response = await fetch(`${API_SERVICES}${id}/`);
+    const data = await response.json();
+    document.getElementById("service_id").value = data.id;
+    document.getElementById("service_name").value = data.service_name;
+    document.getElementById("url").value = data.url;
+    document.getElementById("soap_action").value = data.soap_action;
+    await fetchCompanies(data.insurance_company);
+    const modal = new bootstrap.Modal(document.getElementById("serviceModal"));
+    modal.show();
+}
+
+async function editTemplate(id) {
+    const response = await fetch(`${API_SERVICES}${id}/`);
+    const data = await response.json();
+    document.getElementById("template_service_id").value = data.id;
+    document.getElementById("soap_template").value = data.soap_template?.trim() || "";
+    document.getElementById("request_template").value = data.request_template?.trim() || "";
+    const modal = new bootstrap.Modal(document.getElementById("soapTemplateModal"));
+    modal.show();
+}
+
+document.getElementById("serviceForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("service_id").value;
+    const payload = {
+        insurance_company: document.getElementById("insurance_company").value,
+        service_name: document.getElementById("service_name").value,
+        url: document.getElementById("url").value,
+        soap_action: document.getElementById("soap_action").value,
+        soap_template: document.getElementById("soap_template")?.value || null
+    };
+    const method = id ? "PUT" : "POST";
+    const url = id ? `${API_SERVICES}${id}/update/` : `${API_SERVICES}new/`;
+
+    await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const modalEl = document.getElementById("serviceModal");
+    bootstrap.Modal.getInstance(modalEl).hide();
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    fetchServices();
+});
+
+document.getElementById("soapTemplateForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("template_service_id").value;
+    const soap = document.getElementById("soap_template").value;
+    const request = document.getElementById("request_template").value;
+
+    await fetch(`${API_SERVICES}${id}/template/`, {
+        method: "PATCH",
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            soap_template: soap,
+            request_template: request
+        })
+    });
+
+    const modalEl = document.getElementById("soapTemplateModal");
+    bootstrap.Modal.getInstance(modalEl).hide();
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+});
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await fetchCompanies();
+    fetchServices();
+});
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("searchBox");
+
+    // Enter ile arama
+    searchInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        window.location.href = `?q=${encodeURIComponent(query)}`;
+      }
+    });
+
+    // Temizleme butonu varsa çalışır
+    window.clearSearch = function () {
+      window.location.href = window.location.pathname;
+    };
+  });
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,194 @@
+<style>
+.pagination .page-link {
+  background-color: #fffff;
+  color: #d64a42;
+  border: none;
+  margin: 0 2px;
+}
+.pagination .page-item.active .page-link {
+  background-color: #d64a42;
+  color: white;
+  border: none;
+}
+.pagination .page-link:hover {
+  background-color: #f8d7da;
+  color: #d64a42;
+}
+</style>
+
+<!-- 🔼 İletişim Bilgisi Ekle Butonu -->
+<div class="d-flex justify-content-end mb-3">
+      <button class="btn text-white fw-bold btn-sm px-3 py-1 rounded shadow-sm"
+              style="background-color: #e1b45f;"
+              data-bs-toggle="modal"
+              data-bs-target="#addContactModal">
+        <i class="bi bi-plus-circle me-2"></i>İletişim Bilgisi Ekle
+      </button>
+</div>
+
+{% if contacts %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="text-white" style="background-color: #7951aa;">
+            <tr>
+              <th class="text-center">Tip</th>
+              <th class="text-center">Değer</th>
+              <th class="text-center">Birincil</th>
+              <th class="text-center">Onaylı</th>
+              <th class="text-center">Kayıt Tarihi</th>
+              <th class="text-center">Etiket</th>
+              <th class="text-center">İşlem</th>
+            </tr>
+          </thead>
+            <tbody>
+              {% for c in contacts %}
+              <tr class="border-bottom text-center">
+                <td>
+                  {% if c.contact_type == 'phone' %}
+                    <i class="bi bi-telephone"></i> Telefon
+                  {% elif c.contact_type == 'email' %}
+                    <i class="bi bi-envelope"></i> E-posta
+                  {% else %}
+                    {{ c.get_contact_type_display }}
+                  {% endif %}
+                </td>
+                <td>{{ c.value }}</td>
+                <td>
+                  {% if c.contact_type == 'phone' %}
+                    {% if c.is_primary %}
+                      <span class="badge" style="background-color: #e1b45f; color: #fff;">Birincil</span>
+                    {% endif %}
+                    <span class="d-none phone-exists"></span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.is_verified %}
+                    <span class="badge bg-success">Onaylı</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Onaysız</span>
+                  {% endif %}
+                </td>
+                <td>{{ c.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ c.get_label_display }}</span>
+                </td>
+                <td>
+                  <button class="btn btn-link text-danger p-0" data-contact-id="{{ c.id }}" onclick="deleteContact(this.dataset.contactId)" title="Sil">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if page_obj and page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="loadContactPage(1)">«</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="loadContactPage({{ page_obj.previous_page_number }})">‹</a>
+        </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="#" onclick="loadContactPage({{ num }})">{{ num }}</a>
+          </li>
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="#" onclick="loadContactPage({{ num }})">{{ num }}</a>
+          </li>
+        {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+          <li class="page-item disabled">
+            <span class="page-link">...</span>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="loadContactPage({{ page_obj.next_page_number }})">›</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="#" onclick="loadContactPage({{ page_obj.paginator.num_pages }})">»</a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
+{% else %}
+  <div class="text-center text-muted my-4">
+    <i class="bi bi-person-lines-fill fs-1 mb-3" style="color: #adb5bd;"></i>
+    <div>Bu müşteriye ait iletişim bilgisi bulunamadı.</div>
+  </div>
+{% endif %}
+
+
+<!-- ✅ İletişim Modalı -->
+<div class="modal fade" id="addContactModal" tabindex="-1" aria-labelledby="addContactModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3" style="background-color: #fff;">
+      <div class="modal-header border-0">
+        <h5 class="modal-title" id="addContactModalLabel">İletişim Bilgisi Ekle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addContactForm">
+        <div class="modal-body">
+          {% csrf_token %}
+          <!-- Tür -->
+          <div class="mb-3">
+            <label class="form-label">Tür</label>
+            <select class="form-select" name="contact_type" id="contactTypeSelect" required>
+              <option value="phone">Telefon</option>
+              <option value="email">E-posta</option>
+            </select>
+          </div>
+          <!-- Değer -->
+          <div class="mb-3">
+            <label class="form-label">Değer</label>
+            <input type="tel" class="form-control" name="value" id="contactValueInput"
+                   placeholder="5XXXXXXXXX"
+                   pattern="5[0-9]{9}" inputmode="numeric"
+                   maxlength="10" minlength="10" required>
+          </div>
+          <!-- Etiket -->
+          <div class="mb-3">
+            <label class="form-label">Etiket</label>
+            <select class="form-select" name="label">
+              <option value="main">Birincil</option>
+              <option value="secondary">İkincil</option>
+              <option value="dask">DASK</option>
+              <option value="transfer">Transfer</option>
+              <option value="other">Diğer</option>
+            </select>
+          </div>
+          <!-- Onaylı mı ve Birincil mi? -->
+          <div class="mb-3 d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_verified" id="contactVerified">
+              <label class="form-check-label" for="contactVerified">Onaylı</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_primary" id="contactPrimary">
+              <label class="form-check-label" for="contactPrimary">Birincil</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+          <button type="button" class="btn text-white fw-bold btn-sm" style="background-color:#e1b45f;" onclick="submitContact()">Ekle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  flower:
+    image: mher/flower
+    container_name: flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+
+  celery_worker:
+    build:
+      context: .
+    container_name: celery_worker
+    command: celery -A INSAI worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+
+  celerybeat:
+    build:
+      context: .
+    container_name: celerybeat
+    command: celery -A INSAI beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+
+  celery_cookie_worker:   # 👈 YENİ SERVİS!
+    build:
+      context: .
+    container_name: celery_cookie_worker
+    command: celery -A INSAI worker --loglevel=info -Q cookie
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1

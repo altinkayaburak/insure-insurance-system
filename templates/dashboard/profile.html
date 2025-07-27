@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-color: #5e71d3;
+        --secondary-color: #291f69;
+        --primary-light: #8a9ae8;
+        --primary-extra-light: #e8ecff;
+        --text-dark: #333;
+        --background: #f8f9fa;
+    }
+    .userprofile-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 0 28px;
+        margin-top: 84px;
+    }
+    .userprofile-card {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        background: #fff;
+        border-radius: 20px;
+        padding: 42px 32px;
+        max-width: 1250px;
+        min-width: 0;
+        width: 100%;
+        gap: 40px;
+    }
+    .userprofile-picture-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 116px;
+        margin-right: 10px;
+    }
+    .userprofile-picture-container {
+        width: 100px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    .userprofile-picture {
+        width: 94px;
+        height: 94px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--primary-extra-light);
+        box-shadow: 0 3px 12px rgba(94, 113, 211, 0.12);
+    }
+    .userprofile-upload-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 15px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 11px;
+        cursor: pointer;
+        font-size: 13px;
+        margin-top: 7px;
+        transition: all 0.2s;
+        border: none;
+        outline: none;
+    }
+    .userprofile-upload-label:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+    }
+    .userprofile-infos-wrapper {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+        width: 100%;
+        flex: 1 1 0;
+        align-items: stretch;
+        min-width: 0;
+    }
+    .userprofile-section {
+        background: var(--background, #f8f9fa);
+        border-radius: 13px;
+        padding: 18px 13px 10px 13px;
+        min-width: 180px;
+        max-width: 280px;
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        box-sizing: border-box;
+    }
+    .userprofile-section-title {
+        color: var(--primary-color, #5e71d3);
+        font-weight: 600;
+        font-size: 1.06rem;
+        margin-bottom: 9px;
+        border-bottom: 1px solid #e8ecff;
+        padding-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .userprofile-section-title i {
+        color: var(--secondary-color, #291f69);
+    }
+    .userprofile-info-label {
+        color: #5e71d3;
+        font-size: 0.90rem;
+        margin-bottom: 1px;
+        opacity: 0.85;
+    }
+    .userprofile-info-value {
+        color: #222;
+        font-size: 0.99rem;
+        font-weight: 500;
+    }
+    .userprofile-info-row {
+        margin-bottom: 4px;
+    }
+    @media (max-width: 1150px) {
+        .userprofile-card { max-width: 99vw; gap: 12px; padding: 20px 2vw;}
+        .userprofile-section { padding: 13px 6px 6px 8px; }
+        .userprofile-section-title { font-size: 1rem; }
+    }
+    @media (max-width: 900px) {
+        .userprofile-infos-wrapper { flex-direction: column; gap: 10px; }
+        .userprofile-card { flex-direction: column; align-items: center; gap: 10px;}
+        .userprofile-picture-col { margin-right: 0; margin-bottom: 10px; }
+    }
+</style>
+
+<div class="userprofile-container">
+    <div class="userprofile-card">
+        <!-- Profil Fotoğrafı ve Fotoğraf Seç -->
+        <div class="userprofile-picture-col">
+            <div class="userprofile-picture-container">
+                {% if profile_user.profile_picture %}
+                    <img src="{{ profile_user.profile_picture.url }}"
+                        onerror="this.onerror=null;this.src='{% static 'img/default_avatar.png' %}'"
+                        class="userprofile-picture" alt="Profil Resmi">
+                {% else %}
+                    <img src="{% static 'default_avatar.png' %}" alt="Profil" class="userprofile-picture">
+                {% endif %}
+            </div>
+            {% if is_own_profile %}
+            <form method="post" action="{% url 'upload_profile_picture' key_guid=profile_user.key_guid|stringformat:"s"|lower %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <label for="file-upload" class="userprofile-upload-label">
+                    <i class="bi bi-camera"></i> Fotoğraf Seç
+                </label>
+                <input id="file-upload" type="file" name="profile_picture" accept="image/*" class="d-none" onchange="this.form.submit()">
+            </form>
+            {% endif %}
+        </div>
+        <!-- Bilgi Kutuları YANYANA -->
+        <div class="userprofile-infos-wrapper">
+            <div class="userprofile-section">
+                <div class="userprofile-section-title">
+                    <i class="bi bi-person-circle"></i> Kişisel Bilgiler
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Kullanıcı Adı</div>
+                    <div class="userprofile-info-value">{{ user.username }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">E-posta</div>
+                    <div class="userprofile-info-value">{{ user.email }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Telefon</div>
+                    <div class="userprofile-info-value">{{ user.phone_number|default:"-" }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Doğum Tarihi</div>
+                    <div class="userprofile-info-value">{{ user.birth_date|default:"-" }}</div>
+                </div>
+            </div>
+            <div class="userprofile-section">
+                <div class="userprofile-section-title">
+                    <i class="bi bi-geo-alt"></i> Adres Bilgileri
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Şehir</div>
+                    <div class="userprofile-info-value">{{ user.city|default:"-" }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">İlçe</div>
+                    <div class="userprofile-info-value">{{ user.district|default:"-" }}</div>
+                </div>
+            </div>
+            <div class="userprofile-section">
+                <div class="userprofile-section-title">
+                    <i class="bi bi-briefcase"></i> İş Bilgileri
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Departman</div>
+                    <div class="userprofile-info-value">{{ user.department|default:"-" }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Ünvan</div>
+                    <div class="userprofile-info-value">{{ user.title|default:"-" }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Rol</div>
+                    <div class="userprofile-info-value">{{ user.role|default:"-" }}</div>
+                </div>
+            </div>
+            <div class="userprofile-section">
+                <div class="userprofile-section-title">
+                    <i class="bi bi-gear"></i> Sistem Bilgileri
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Kayıt Tarihi</div>
+                    <div class="userprofile-info-value">{{ user.date_joined|date:'Y-m-d H:i' }}</div>
+                </div>
+                <div class="userprofile-info-row">
+                    <div class="userprofile-info-label">Son Giriş</div>
+                    <div class="userprofile-info-value">{{ user.last_login|date:'Y-m-d H:i' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

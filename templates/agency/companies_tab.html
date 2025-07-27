@@ -1,0 +1,274 @@
+
+<!-- ✅ Tüm Sayfa için CSS (Kırmızı Temalı - #291f69 uyumlu) -->
+<style>
+  /* 🔴 Butonlar */
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .btn-light {
+    background-color: #f8f9fa;
+  }
+
+
+  .modal-title {
+    font-weight: 600;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧩 Modal içi padding */
+  .modal-body {
+    padding: 1.5rem;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+
+</style>
+
+<div class="container mt-5">
+
+  <!-- 🔼 Başlık ve Yeni Şirket Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Çalışılan Sigorta Şirketleri</h4>
+    <button id="companyAddBtn" type="button" class="btn btn-danger btn-sm px-3 py-2 shadow-sm">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Şirket
+    </button>
+  </div>
+
+<div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+  <div class="input-group">
+    <span class="input-group-text border bg-white">
+      <i class="bi bi-search text-muted"></i>
+    </span>
+    <input type="text" id="companySearchBox" class="form-control border" placeholder="Şirket ara..." value="{{ query }}">
+  </div>
+  {% if query %}
+  <button class="btn btn-light border" onclick="clearCompanySearch()" title="Temizle">
+    <i class="bi bi-x-lg"></i>
+  </button>
+  {% endif %}
+</div>
+
+
+<!-- 📋 Şirketler Tablosu -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" id="companyTable" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #291f69;">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>Şirket Adı</th>
+            <th>Kodu</th>
+            <th>Durum</th>
+            <th class="text-center pe-3" style="width: 100px;">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in agency_companies_with_passwords %}
+          <tr>
+            <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+            <td>{{ item.agency_company.company.name }}</td>
+            <td>{{ item.agency_company.company.company_code }}</td>
+            <td>
+              {% if item.agency_company.company.is_active %}
+                <span class="badge bg-status-active">Aktif</span>
+              {% else %}
+                <span class="badge bg-status-passive">Pasif</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-3">
+              <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-light btn-sm company-edit-btn" data-id="{{ item.agency_company.company.id }}">
+                  <i class="bi bi-pencil text-danger"></i>
+                </button>
+                <button class="btn btn-light btn-sm company-delete-btn" data-id="{{ item.agency_company.company.id }}">
+                  <i class="bi bi-trash text-danger"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">Şirket bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 🔽 Sayfalama -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center py-3">
+  <ul class="pagination pagination-sm mb-0">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <button class="page-link company-page-btn" data-page="{{ page_obj.previous_page_number }}">«</button>
+      </li>
+    {% endif %}
+    {% for num in page_range %}
+      {% if num == '...' %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <button class="page-link company-page-btn" data-page="{{ num }}">{{ num }}</button>
+        </li>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <button class="page-link company-page-btn" data-page="{{ page_obj.next_page_number }}">»</button>
+      </li>
+    {% endif %}
+  </ul>
+</div>
+{% endif %}
+
+
+<!-- ✅ Şirket Ekle/Güncelle Modalı -->
+<div class="modal fade" id="companyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="companyForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="company_id" id="company_id">
+
+        <div class="modal-header ">
+          <h5 class="modal-title text-black">Şirket Bilgileri</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Sigorta Şirketi</label>
+              <select name="insurance_company" id="insurance_company" class="form-select" required>
+                <option value="">Şirket Seçin</option>
+                <!-- JS ile doldurulacak -->
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Şirket Kodu</label>
+              <input type="text" name="company_code" id="company_code" class="form-control" readonly>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Kullanıcı Adı</label>
+              <input type="text" name="username" id="company_username" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Şifre</label>
+              <input type="text" name="password" id="company_password" class="form-control">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Web Kullanıcı Adı</label>
+              <input type="text" name="web_username" id="company_web_username" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Web Şifresi</label>
+              <input type="text" name="web_password" id="company_web_password" class="form-control">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Partaj Kodu</label>
+            <input type="text" name="partaj_code" id="company_partaj_code" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Cookie</label>
+            <textarea name="cookie" id="company_cookie" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+          <button type="submit" class="btn btn-primary">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+
+

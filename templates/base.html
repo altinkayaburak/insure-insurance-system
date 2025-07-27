@@ -1,0 +1,226 @@
+
+{% load static %}
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Sigorta CRM{% endblock %}</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+
+
+    {% block extra_css %}{% endblock %}
+
+
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+<div class="sidebar-logo">
+  <div class="profile-row" style="justify-content: center;">
+    <div class="profile-picture-wrapper">
+      {% if request.user.profile_picture %}
+        <img src="{{ request.user.profile_picture.url }}?v={{ request.user.profile_picture.name|urlencode }}" class="profile-picture shadow-sm">
+      {% else %}
+        <img src="{% static 'default_avatar.png' %}" alt="Varsayılan Profil Resmi" class="profile-picture rounded-circle shadow">
+      {% endif %}
+    </div>
+  </div>
+  <div class="profile-info text-center" style="margin-bottom: 0.5rem;">
+    <a href="{% url 'profile' key_guid=request.user.key_guid|stringformat:"s"|lower %}" class="text-decoration-none text-dark">
+      <h5 class="profile-name mb-0">{{ request.user.first_name }} {{ request.user.last_name }}</h5>
+    </a>
+    <div class="profile-role text-muted small">
+      {{ request.user.title|default:"" }}{% if request.user.title and request.user.department %} · {% endif %}{{ request.user.department|default:"" }}
+    </div>
+  </div>
+
+  <!-- Yanyana ve ortalı Profil & Çıkış -->
+  <div class="sidebar-profile-links d-flex justify-content-center align-items-center gap-3 mt-2">
+    <a href="{% url 'profile' key_guid=request.user.key_guid|stringformat:"s"|lower %}"
+       class="sidebar-profile-link fw-semibold text-decoration-none"
+       style="color:#222; font-size:15px;">
+      Profil
+    </a>
+    <span style="color:#aaa;">|</span>
+    <a href="{% url 'logout' %}"
+       class="sidebar-profile-link fw-semibold text-decoration-none"
+       style="color:#222; font-size:15px;">
+      Çıkış
+    </a>
+  </div>
+</div>
+
+
+      <ul class="nav flex-column">
+
+        <!-- DASHBOARD -->
+        <li class="nav-item">
+          <a class="nav-link has-submenu" href="#" data-menu="dashboard">
+            <i class="bi bi-speedometer2 me-2"></i>
+            <span class="menu-text">Dashboard</span>
+            <i class="bi bi-chevron-down ms-auto"></i>
+          </a>
+          <ul class="submenu">
+            <li>
+              <a class="nav-link" href="{% url 'dashboard_sales' %}">Satış</a>
+            </li>
+            <li>
+              <a class="nav-link" href="{% url 'customer_dashboard_page' %}">Müşteri</a>
+            </li>
+          </ul>
+        </li>
+
+
+    <!-- GATEWAY -->
+    <li class="nav-item">
+      <a class="nav-link has-submenu" href="#" data-menu="gateway">
+        <i class="bi bi-people me-2"></i>
+        <span class="menu-text">Gateway</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </a>
+      <ul class="submenu">
+        <li><a class="nav-link" href="{% url 'agency_list' %}">Agency</a></li>
+        <li><a class="nav-link" href="{% url 'insurance_company_list' %}">Companies</a></li>
+        <li><a class="nav-link" href="{% url 'product_list' %}">Products</a></li>
+        <li><a class="nav-link" href="{% url 'key_list' %}">Keys</a></li>
+        <li><a class="nav-link" href="{% url 'parameters_list' %}">Parameters</a></li>
+        <li><a class="nav-link" href="{% url 'service_configurations_page' %}">Service</a></li>
+        <li><a class="nav-link" href="{% url 'offer_service_configurations_page' %}">Offer Service</a></li>
+         <li><a class="nav-link" href="{% url 'transfer_service_list' %}">Transfer Service</a></li>
+         <li><a class="nav-link" href="{% url 'service_log_list' %}">Log Detail</a></li>
+        <li><a class="nav-link" href="{% url 'service_mapping' %}">Mapping</a></li>
+      </ul>
+    </li>
+    <!-- TEKLIF -->
+    <li class="nav-item">
+      <a class="nav-link has-submenu" href="#" data-menu="offer">
+        <i class="bi bi-gear me-2"></i>
+        <span class="menu-text">Teklif Yönetimi</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </a>
+      <ul class="submenu">
+        <li><a class="nav-link" href="{% url 'search_customer' %}">Teklif Al</a></li>
+        <li><a class="nav-link" href="{% url 'proposal_list' %}">Teklifler</a></li>
+      </ul>
+    </li>
+        <!-- Poliçe -->
+    <li class="nav-item">
+      <a class="nav-link has-submenu" href="#" data-menu="policy">
+        <i class="bi bi-people me-2"></i>
+        <span class="menu-text">Poliçe Yönetimi</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+      </a>
+      <ul class="submenu">
+        <li><a class="nav-link" href="{% url 'policy_list_page' %}">Poliçeler</a></li>
+        <li><a class="nav-link" href="{% url 'transfer_page' %}">Poliçe Transfer</a></li>
+      </ul>
+    </li>
+
+  </ul>
+</nav>
+
+
+<!-- Ana İçerik -->
+<div class="main-content px-2 py-4" style="background:#edeaea;">
+  <!-- Sayfa İçeriği -->
+<div class="content-wrapper rounded" style="margin-top: -20px; min-height: calc(100vh - 80px); overflow: hidden; background-color: transparent;">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<!-- 🌐 Global Popup Modal (Sade Beyaz Temalı) -->
+<div class="modal fade" id="globalPopup" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-sm rounded-4">
+      <div class="modal-header bg-white border-bottom">
+        <h5 class="modal-title fw-semibold text-dark" id="popupTitle">Bilgi</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-dark small" id="popupBody" style="font-size: 0.95rem;"></div>
+      <div class="modal-footer border-0 justify-content-end" id="popupFooter"></div>
+    </div>
+  </div>
+</div>
+
+
+<script src="{% static 'js/utils_customer.js' %}"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const allMenus = document.querySelectorAll(".nav-link.has-submenu");
+
+  // Alt menüleri başta kapalı başlat
+  document.querySelectorAll(".submenu").forEach(sub => sub.classList.remove("show"));
+  allMenus.forEach(menu => menu.classList.remove("active"));
+
+  // LocalStorage'dan açık olanı getir
+  const openMenu = localStorage.getItem("activeMenu");
+  if (openMenu) {
+    const active = document.querySelector(`.nav-link.has-submenu[data-menu="${openMenu}"]`);
+    if (active) {
+      active.classList.add("active");
+      const submenu = active.nextElementSibling;
+      if (submenu && submenu.classList.contains("submenu")) {
+        submenu.classList.add("show");
+      }
+    }
+  }
+
+  // Tıklanınca diğerlerini kapat, sadece birini aç
+  allMenus.forEach(menu => {
+    menu.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      const submenu = this.nextElementSibling;
+      const isOpen = submenu.classList.contains("show");
+
+      // Hepsini kapat
+      document.querySelectorAll(".submenu").forEach(sub => sub.classList.remove("show"));
+      allMenus.forEach(m => m.classList.remove("active"));
+
+      // Eğer tıklanan kapalıysa aç
+      if (!isOpen) {
+        submenu.classList.add("show");
+        this.classList.add("active");
+        localStorage.setItem("activeMenu", this.dataset.menu);
+      } else {
+        localStorage.removeItem("activeMenu");
+      }
+    });
+  });
+});
+
+    $(document).ajaxComplete(function(event, xhr, settings) {
+    if (xhr.status === 302) {
+      const redirectUrl = xhr.getResponseHeader("Location");
+      if (redirectUrl && redirectUrl.includes("login")) {
+        window.location.href = redirectUrl;
+      }
+    }
+
+    if (xhr.status === 403 && xhr.responseText.includes("login")) {
+      window.location.href = "/login/";
+    }
+  });
+
+</script>
+
+
+</body>
+</html>
+
+{% block extra_js %}{% endblock %}

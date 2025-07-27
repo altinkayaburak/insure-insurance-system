@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
+<style>
+  /* Evet seçili olduğunda checkbox turuncu olsun */
+input[type="checkbox"]#key_144:checked {
+  background-color: #e1b45f;
+  border-color: #e1b45f;
+}
+  select[name="key_201"] {
+  pointer-events: none;
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+.product-form-header{display:flex;align-items:center;gap:1.1rem;margin-bottom:1.5rem;margin-top:0.8rem;margin-left:0.1rem;}.product-form-header .icon-circle{background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;height:48px;width:48px;box-shadow:0 2px 10px rgba(48,87,199,.08);}
+
+</style>
+
+
+<div class="container mt-3">  <!-- fluid değil -->
+        <!-- Form Ürün Başlığı -->
+<div class="product-form-header align-items-center mb-3" style="gap:1.1rem; margin-top: 0.8rem; margin-left: 0.1rem;">
+  <span class="icon-circle shadow-sm bg-white d-flex align-items-center justify-content-center" style="height:48px;width:48px;border-radius:50%;">
+    <img src="{% static 'img/home.png' %}" alt="Konut" style="width:28px;height:28px;">
+  </span>
+  <span class="fw-bold" style="font-size:1.20rem; color:#3057c7;">
+    Konut
+  </span>
+</div>
+  <div class="row g-4">
+
+
+
+    <!-- ✅ Sigortalı ve Sigorta Ettiren Kutusu -->
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-2">
+          <div class="d-flex align-items-center">
+            <div class="icon-circle p-2 rounded-circle me-2" style="background-color: rgba(214, 74, 66, 0.1);">
+              <img src="{% static 'img/user_detail.png' %}" alt="User Icon" class="img-fluid" style="width: 20px; height: 18px;">
+            </div>
+            <h6 class="mb-0 fw-semibold" style="color: #d64a42; font-size: 0.9rem;">Sigortalı Bilgileri</h6>
+          </div>
+        </div>
+        <div class="card-body p-3">
+          <form id="sigortaliForm">
+            {% for key in blocks.sigortali %}
+              {% if key.id == 33 %}
+                <!-- Toggle Switch: Sigorta Ettiren Alanı Aç/Kapat -->
+                <div class="form-check form-switch mb-2">
+                <input type="checkbox"
+                       class="form-check-input sigorta-ettiren-toggle"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       {% if selected_ettiren %}checked{% endif %}>
+                  <label class="form-check-label small" for="key_{{ key.id }}">{{ key.description }}</label>
+                </div>
+              {% else %}
+                <!-- Diğer readonly alanlar -->
+                <div class="mb-2">
+                  <label class="form-label small">{{ key.description }}</label>
+                  <input type="{% if key.input_type == 'date' %}date{% else %}text{% endif %}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if key.name == 'SigortaliDogumTarihi' and customer.birth_date %}{{ customer.birth_date|date:'Y-m-d' }}{% elif key.name == 'SigortaliAdi' %}{{ customer.full_name }}{% elif key.name == 'SigortaliKimlikNo' %}{{ customer.identity_number }}{% elif key.name == 'SigortaliCepTelefonu' %}{{ primary_phone|default:'' }}{% endif %}"
+                         readonly style="background-color: #e9ecef;">
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            <!-- Sigorta Ettiren Alanı (toggle ile açılır) -->
+           <div id="sigortaEttirenFields" class="mt-3 pt-2 border-top {% if not selected_ettiren %}d-none{% endif %}">
+            {% for key in blocks.sigorta_ettiren %}
+              <div class="mb-2">
+                <label class="form-label small">{{ key.description }}</label>
+
+           {% if key.name == 'SigortaEttirenAdi' %}
+              <input type="text"
+                       class="form-control"
+                       name="key_{{ key.id }}"
+                       id="key_{{ key.id }}"
+                       value="{% if selected_ettiren %}{{ selected_ettiren.full_name }}{% endif %}"
+                       readonly style="background-color: #e9ecef;">
+
+                {% elif key.name == 'SigortaEttirenKimlikNo' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.identity_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+
+                {% elif key.name == 'SigortaEttirenDogumTarihi' %}
+                  <div class="mb-2">
+                    <input type="text"
+                           class="form-control"
+                           name="key_{{ key.id }}"
+                           id="sigortaEttirenDogumTarihi"
+                           value="{% if selected_ettiren %}{{ selected_ettiren.birth_date }}{% endif %}"
+                           {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                  </div>
+                {% elif key.name == 'SigortaEttirenCepTelefonu' %}
+                  <input type="text"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         value="{% if selected_ettiren %}{{ selected_ettiren.phone_number }}{% endif %}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+
+                {% else %}
+                  <!-- Varsayılan input (ekstra alanlar varsa) -->
+                  <input type="{{ key.input_type }}"
+                         class="form-control"
+                         name="key_{{ key.id }}"
+                         {% if selected_ettiren %}readonly style="background-color: #e9ecef;"{% endif %}>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
+
+<!-- ✅ Adres Kutusu -->
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-success bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/location_detail.png' %}" alt="Adres Icon" class="img-fluid" style="width: 18px; height: 18px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-success" style="font-size: 0.9rem;">Adres Detayı</h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+
+      <!-- 🔘 Yenileme mi? (Key 144) -->
+      <div class="form-check form-switch mb-3">
+        <input type="checkbox" class="form-check-input" name="key_144" id="key_144" value="1">
+        <label class="form-check-label small" for="key_144">Yenileme mi?</label>
+      </div>
+
+      <!-- 🟠 DASK Poliçe No (Key 100) -->
+      <div class="mb-3 d-none" id="daskPoliceWrapper">
+        <label class="form-label small">DASK Poliçe No</label>
+        <div class="position-relative">
+          <input type="text"
+                 class="form-control pe-5"
+                 name="key_100"
+                 id="daskPoliceInput"
+                 placeholder="DASK Poliçe No">
+          <button type="button"
+                  id="btnSorgulaDask"
+                  class="btn btn-sm fw-bold position-absolute end-0 top-0 mt-1 me-1"
+                  style="background-color: #e1b45f; color: white;">
+                  Sorgula
+          </button>
+        </div>
+      </div>
+
+      <!-- 🟡 UAVT Adres Kodu (Key 102) -->
+      <div class="mb-3" id="uavtWrapper">
+        <label class="form-label small">UAVT Adres Kodu</label>
+        <div class="position-relative">
+          <input type="text"
+                 class="form-control pe-5"
+                 name="key_102"
+                 id="uavt_input"
+                 placeholder="UAVT Kodu">
+          <button type="button"
+                  id="btnSorgulaUavt"
+                  class="btn btn-sm fw-bold position-absolute end-0 top-0 mt-1 me-1"
+                  style="background-color:#e1b45f; color: white;">
+                  Sorgula
+          </button>
+        </div>
+      </div>
+
+      <!-- 🔘 Adres Kodu Bul toggle -->
+      <div class="form-check form-switch mb-3" id="adresDetaySwitchWrapper">
+        <input type="checkbox" class="form-check-input" id="adres_detay_toggle">
+        <label class="form-check-label small" for="adres_detay_toggle">Adres Kodu Bul</label>
+      </div>
+
+      <!-- 📦 195–202 alanları: Şehir → Daire -->
+      <div id="adresDetayInputs" class="d-none">
+        {% for key in blocks.adres %}
+          {% if key.id >= 195 and key.id <= 202 %}
+            <div class="mb-2">
+              <label class="form-label small">{{ key.description }}</label>
+              <select class="form-select" name="key_{{ key.id }}" id="key_{{ key.id }}">
+                <option value="">Seçiniz</option>
+              </select>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-info bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/home_detail.png' %}" alt="Varlık Icon" class="img-fluid" style="width: 18px; height: 18px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-info" style="font-size: 0.9rem;">Varlık Bilgileri</h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+
+      {% for key in blocks.varlik %}
+        {% with input_id="varlik_key_"|add:key.id|stringformat:"s" %}
+        <div class="mb-2">
+          <label class="form-label small" for="{{ input_id }}">{{ key.description }}</label>
+
+          {% if key.id == 201 %}
+            <!-- 🏢 Bina Adı her zaman kapalı readonly text -->
+            <input type="text"
+                   class="form-control"
+                   name="key_201"
+                   id="{{ input_id }}"
+                   readonly
+                   style="background-color: #e9ecef;">
+
+          {% elif key.input_type == "select" or key.parameters|length > 0 %}
+            <!-- Select alan -->
+            <select name="key_{{ key.id }}" id="{{ input_id }}" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for param in key.parameters %}
+                <option value="{{ param.ParameterID }}">{{ param.ParameterName }}</option>
+              {% endfor %}
+            </select>
+
+          {% elif key.input_type == "checkbox" %}
+            <!-- Checkbox alanı -->
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" name="key_{{ key.id }}" id="{{ input_id }}">
+              <label class="form-check-label" for="{{ input_id }}">{{ key.description }}</label>
+            </div>
+
+          {% else %}
+            <!-- Metin giriş alanı -->
+            <input type="{{ key.input_type|default:'text' }}"
+                   class="form-control"
+                   name="key_{{ key.id }}"
+                   id="{{ input_id }}"
+                   {% if key.readonly %}readonly style="background-color: #e9ecef;"{% endif %}>
+          {% endif %}
+        </div>
+        {% endwith %}
+      {% endfor %}
+
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ✅ Teklif Bilgileri Kutusu -->
+<div class="col-md-3">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-2">
+      <div class="d-flex align-items-center">
+        <div class="icon-circle bg-warning bg-opacity-10 p-2 rounded-circle me-2">
+          <img src="{% static 'img/list_detail.png' %}" alt="Teklif Icon" class="img-fluid" style="width: 18px; height: 16px;">
+        </div>
+        <h6 class="mb-0 fw-semibold text-warning" style="font-size: 0.9rem;">Teklif Bilgileri</h6>
+      </div>
+    </div>
+    <div class="card-body p-3">
+
+      {% for key in blocks.teklif %}
+        {% with input_id="teklif_key_"|add:key.id|stringformat:"s" %}
+        <div class="mb-2">
+          <label class="form-label small" for="{{ input_id }}">{{ key.description }}</label>
+
+          {% if key.input_type == "select" or key.parameters|length > 0 %}
+            <select name="key_{{ key.id }}" id="{{ input_id }}" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for param in key.parameters %}
+                <option value="{{ param.ParameterID }}">{{ param.ParameterName }}</option>
+              {% endfor %}
+            </select>
+          {% else %}
+              <input type="{{ key.input_type|default:'text' }}"
+                   class="form-control"
+                   name="key_{{ key.id }}"
+                   id="{{ input_id }}"
+                   {% if key.readonly %}readonly style="background-color: #e9ecef;"{% endif %}>
+          {% endif %}
+        </div>
+        {% endwith %}
+      {% endfor %}
+
+      <!-- 🔗 Proposal & Ürün Kodu -->
+      <div class="mb-2 text-muted small mt-3">
+        <strong>Proposal ID:</strong> {{ proposal_id }}<br>
+        <strong>Ürün Kodu:</strong> {{ product_code }}
+      </div>
+
+      <!-- 🚀 Teklif Al Butonu -->
+      <div class="d-grid">
+        <button id="submitOffer" type="button" class="btn fw-bold btn-primary btn-sm" style="background-color: #e1b45f; border-color: #e1b45f;">Teklif Al</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Sigortalı için -->
+<input type="hidden" name="key_204" id="key_204"> <!-- insuredNoAnkara -->
+<input type="hidden" name="key_205" id="key_205"> <!-- insuredNoBereket -->
+<input type="hidden" name="key_207" id="key_207"> <!-- insuredNoOrient -->
+<input type="hidden" name="key_206" id="key_206"> <!-- insuredNoUnico -->
+<input type="hidden" name="key_208" id="key_208"> <!-- insuredRay -->
+
+<!-- Sigorta Ettiren için -->
+<input type="hidden" name="key_209" id="key_209"> <!-- CustomerNoAnkara -->
+<input type="hidden" name="key_210" id="key_210"> <!-- CustomerNoBereket -->
+<input type="hidden" name="key_212" id="key_212"> <!-- CustomerNoOrient -->
+<input type="hidden" name="key_211" id="key_211"> <!-- CustomerNoUnico -->
+<input type="hidden" name="key_213" id="key_213"> <!-- CustomerNoRay -->
+
+<input type="hidden" name="key_120" id="key_120"> <!-- Bina Bedel -->
+<input type="hidden" name="key_121" id="key_121"> <!-- Eşya Bedel -->
+<input type="hidden" name="key_119" id="key_119"> <!-- Cam Bedel -->
+<input type="hidden" name="key_103" id="key_103"> <!-- Acik Adres -->
+<input type="hidden" name="key_217" id="key_217"> <!-- İl Adı -->
+<input type="hidden" name="key_218" id="key_218"> <!-- İlçe Adı -->
+
+  </div>
+</div>
+
+<script>
+  window.proposal_id = "{{ proposal_id }}";
+  window.product_code = "{{ product_code }}";
+  window.agency_id = "{{ request.user.agency.id }}";
+  window.user_id = "{{ request.user.id }}";
+  window.formType = "{{ form_type }}";
+  window.branch_id = "{{ request.user.branch.id }}";
+  window.customer_id = "{{ customer.id }}";    // <<< EKLE (customer objesi sayfada varsa!)
+</script>
+
+
+<script src="{% static 'js/home.js' %}"></script>
+<script src="{% static 'js/utils_customer.js' %}"></script>
+
+{% endblock %}

@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- ✅ Stil -->
+<style>
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table-responsive {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+</style>
+
+<div class="container mt-5">
+
+  <!-- 🔼 Başlık ve Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Anahtarlar</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm"
+            data-bs-toggle="modal" data-bs-target="#keyModal">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Anahtar
+    </button>
+  </div>
+
+  <!-- 🔍 Arama -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Anahtar ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+<!-- 📋 Anahtarlar Tablosu -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #291f69;">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>Anahtar Adı</th>
+            <th>Açıklama</th>
+            <th>Oluşturulma</th>
+            <th>Güncelleme</th>
+            <th>Durum</th>
+            <th>Parametreler</th>  <!-- ✅ Yeni sütun -->
+            <th class="text-center pe-3">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for key in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted small">{{ key.KeyID }}</td>
+            <td class="fw-medium">{{ key.KeyName }}</td>
+            <td class="text-muted small">{{ key.Description }}</td>
+            <td class="text-muted small">{{ key.CreatedDate|date:"d.m.Y H:i" }}</td>
+            <td class="text-muted small">{{ key.UpdatedDate|date:"d.m.Y H:i" }}</td>
+            <td>
+              {% if key.IsActive %}
+                <span class="badge bg-success">Aktif</span>
+              {% else %}
+                <span class="badge bg-secondary">Pasif</span>
+              {% endif %}
+            </td>
+            <!-- ✅ Yeni sütun: Parametreler -->
+            <td class="text-center">
+              {% if key.has_parameters %}
+                <button class="btn btn-sm btn-outline-primary"
+                        onclick="openParameterModal({{ key.KeyID }}, '{{ key.KeyName }}')">
+                  <i class="bi bi-list-ul"></i>
+                </button>
+              {% else %}
+                <span class="text-muted small">-</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-3">
+              <div class="d-flex justify-content-center gap-2">
+                <!-- ✏️ Düzenle Butonu -->
+                <button class="btn btn-sm btn-light edit-btn"
+                        data-bs-toggle="modal"
+                        data-bs-target="#keyModal"
+                        data-id="{{ key.KeyID }}"
+                        data-name="{{ key.KeyName }}"
+                        data-description="{{ key.Description }}"
+                        data-active="{{ key.IsActive }}">
+                  <i class="bi bi-pencil text-danger"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">Anahtar bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
+  <!-- 🔽 Sayfalama -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a></li>
+      {% endif %}
+
+      {% for num in page_range %}
+        {% if num == '...' %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% else %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="keyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold text-primary">
+                    <i class="bi bi-key me-2"></i>Anahtar Formu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="keyForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="keyId">
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Anahtar Adı</label>
+                        <input type="text" class="form-control border" id="keyNameInput" name="KeyName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Açıklama (Label)</label>
+                        <input type="text" class="form-control border" id="descriptionInput" name="Description">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Input Type</label>
+                        <select class="form-select border" id="inputTypeInput" name="InputType">
+                            <option value="text">Text</option>
+                            <option value="select">Select</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="date">Date</option>
+                            <option value="number">Number</option>
+                            <option value="number">tel</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label text-muted">Min. Uzunluk</label>
+                            <input type="number" class="form-control border" id="minLengthInput" name="MinLength">
+                        </div>
+                        <div class="col">
+                            <label class="form-label text-muted">Max. Uzunluk</label>
+                            <input type="number" class="form-control border" id="maxLengthInput" name="MaxLength">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label class="form-label text-muted">Regex Deseni</label>
+                        <input type="text" class="form-control border" id="regexInput" name="RegexPattern" placeholder="^\\d+$ sadece rakam, ^[a-zA-Z]+$ sadece harf">
+                    </div>
+
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label text-muted">Koşullu Gösterim: Key</label>
+                            <input type="text" class="form-control border" id="visibleIfKeyInput" name="VisibleIfKey">
+                        </div>
+                        <div class="col">
+                            <label class="form-label text-muted">Değer</label>
+                            <input type="text" class="form-control border" id="visibleIfValueInput" name="VisibleIfValue">
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label text-muted">Durum</label>
+                        <select class="form-select border" id="isActiveInput" name="IsActive">
+                            <option value="true">Aktif</option>
+                            <option value="false">Pasif</option>
+                        </select>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-light px-4" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-primary px-4" id="saveKeyBtn">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paramModal" tabindex="-1" aria-labelledby="paramModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paramModalLabel">Parametreler</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body">
+        <ul id="paramList" class="list-group small">
+          <li class="list-group-item text-muted">Yükleniyor...</li>
+        </ul>
+          <ul id="paramList" class="list-group small">
+            <!-- JS ile doldurulacak -->
+        "</ul>"
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script>
+// Enter tuşuna basınca arama yap
+document.getElementById('searchBox').addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchKeys();
+    }
+});
+
+function searchKeys() {
+    let query = document.getElementById('searchBox').value;
+    window.location.href = "?q=" + encodeURIComponent(query);
+}
+
+function clearSearch() {
+    window.location.href = window.location.pathname;
+}
+
+// Edit Butonuna Tıklayınca Modal İçin Doldurma
+document.querySelectorAll('.edit-btn').forEach(button => {
+    button.addEventListener('click', function () {
+        const keyId = this.getAttribute('data-id');
+
+        fetch(`/database/keys/detail/${keyId}/`)  // 🟣 View birazdan geliyor
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('keyId').value = data.id;
+                document.getElementById('keyNameInput').value = data.name || '';
+                document.getElementById('descriptionInput').value = data.description || '';
+                document.getElementById('inputTypeInput').value = data.input_type || 'text';
+                document.getElementById('minLengthInput').value = data.min_length || '';
+                document.getElementById('maxLengthInput').value = data.max_length || '';
+                document.getElementById('regexInput').value = data.regex || '';
+                document.getElementById('visibleIfKeyInput').value = data.visible_if_key || '';
+                document.getElementById('visibleIfValueInput').value = data.visible_if_value || '';
+                document.getElementById('isActiveInput').value = data.is_active ? 'true' : 'false';
+
+                // Modal'ı aç
+                new bootstrap.Modal(document.getElementById('keyModal')).show();
+            });
+    });
+});
+
+
+
+// Key Kaydetme (AJAX)
+document.getElementById('saveKeyBtn').addEventListener('click', function () {
+    const keyId = document.getElementById('keyId').value;
+    const url = keyId ? `/database/keys/save/${keyId}/` : `/database/keys/save/`;
+
+    fetch(url, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+        },
+        body: new FormData(document.getElementById('keyForm'))
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Bir hata oluştu.");
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Bir şeyler yanlış gitti!");
+        }
+    })
+    .catch(error => {
+        console.error("Hata:", error);
+        alert("Sunucudan veri alınamadı!");
+    });
+});
+
+function openParameterModal(keyId, keyName) {
+  const modal = new bootstrap.Modal(document.getElementById('paramModal'));
+  const paramList = document.getElementById('paramList');
+  document.getElementById('paramModalLabel').textContent = `Parametreler: ${keyName}`;
+  paramList.innerHTML = `<li class="list-group-item text-muted">Yükleniyor...</li>`;
+
+  fetch(`/database/api/parameters-for-key/?key_id=${keyId}`)
+    .then(res => res.json())
+    .then(data => {
+      paramList.innerHTML = '';
+      if (data.length === 0) {
+        paramList.innerHTML = `<li class="list-group-item text-danger">❗ Parametre bulunamadı</li>`;
+      } else {
+        data.forEach(param => {
+          paramList.innerHTML += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><strong>${param.name}</strong> (ID: ${param.id})</span>
+              <button class="btn btn-sm btn-outline-danger btn-delete-param"
+                      onclick="deleteParameter(${keyId}, ${param.id}, this)">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </li>`;
+        });
+      }
+    })
+    .catch(() => {
+      paramList.innerHTML = `<li class="list-group-item text-danger">❌ Parametreler yüklenemedi</li>`;
+    });
+
+  modal.show();
+}
+
+function deleteParameter(keyId, paramId, btn) {
+  if (!confirm("Bu parametreyi silmek istediğinize emin misiniz?")) return;
+
+  fetch(`/database/delete-key-parameter/${keyId}/${paramId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      // Silme başarılı → satırı kaldır
+      btn.closest('li').remove();
+    } else {
+      alert("Silinemedi: " + data.error);
+    }
+  });
+}
+</script>
+
+{% endblock %}

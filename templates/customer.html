@@ -1,0 +1,673 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    :root {
+    --primary-color: #5e71d3;
+    --secondary-color: #e1b45f;
+    --light-primary: #eef0f9;
+    --text-muted: #6c757d;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+/* İstatistik Kartları */
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.bg-primary-soft {
+    background-color: var(--light-primary);
+    color: var(--primary-color);
+}
+
+.bg-warning-soft {
+    background-color: #fff3e6;
+    color: #fd7e14;
+}
+
+.bg-success-soft {
+    background-color: #e6f4ea;
+    color: #28a745;
+}
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.stat-info p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Sekmeler */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: var(--text-muted);
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    background: none;
+}
+
+/* Modern tablo stilleri */
+.table {
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  vertical-align: middle;
+}
+
+.btn-square {
+  border-radius: 0 !important;
+  padding: 0.5rem 1.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-square:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Responsive tablo için */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Kartlar */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+}
+
+.card-title {
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding: 1rem 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.timeline-content .time {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Profil */
+.profile-image img {
+    width: 100px;
+    height: 100px;
+    border: 3px solid var(--light-primary);
+}
+
+.customer-info .info-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.customer-info .label {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.customer-info .value {
+    float: right;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 1rem;
+    }
+}
+
+/* Üst İkonlar */
+.icon-container {
+    gap: 20px;
+    padding: 85px 0;
+}
+
+.form-icon {
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    background-color: #fff;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    position: relative; /* Tooltip için gerekli */
+    overflow: visible !important; /* Tooltip dışarı taşabilsin */
+}
+
+.form-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.form-icon img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+}
+
+.form-icon::after {
+    content: attr(title);
+    position: absolute;
+    left: 50%;
+    top: -20px; /* Dairenin tam üstü */
+    transform: translate(-50%, -100%);
+    background: #5e71d3;
+    color: #fff;
+    font-size: 1rem;
+    padding: 7px 18px;
+    border-radius: 14px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(30,30,50,0.13);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s, transform 0.13s;
+    z-index: 99;
+}
+.form-icon:hover::after {
+    opacity: 1;
+    transform: translate(-50%, -120%);
+}
+
+/* Konuşma balonu oku (tam ortada) */
+.form-icon::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -10px;
+    transform: translateX(-50%);
+    border-width: 7px 7px 0 7px;
+    border-style: solid;
+    border-color: #5e71d3 transparent transparent transparent;
+    opacity: 0;
+    transition: opacity 0.18s;
+    z-index: 98;
+}
+.form-icon:hover::before {
+    opacity: 1;
+}
+
+/* Sekmeler */
+.nav-pills .nav-link {
+    background-color: #f8f9fa;
+    color: var(--text-muted);
+    margin-right: 10px;
+    border-radius: 5px;
+    padding: 10px 20px;
+}
+
+.nav-pills .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* İletişim İkonları */
+.contact-icons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.contact-icons i {
+    font-size: 1.5rem;
+    padding: 10px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s;
+}
+
+.contact-icons i:hover {
+    transform: scale(1.1);
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding: 1rem 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 16px;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background-color: var(--primary-color);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 45px;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    border: 2px solid white;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+@media (min-width: 1400px) {
+  .col-md-3 { padding-right: 45px; }
+  .col-md-9 { padding-left: 45px; }
+}
+
+</style>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Sigorta Dashboard</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+</head>
+<body class="bg-light">
+
+        <div class="d-flex justify-content-center icon-container">
+            <div class="form-icon" title="EVİM" onclick="goToOfferForm('home', 102)">
+              <img src="{% static 'img/home.png' %}" alt="Evim">
+            </div>
+            <div class="form-icon" title="ARABAM">
+              <img src="{% static 'img/car.png' %}" alt="Araç">
+            </div>
+            <div class="form-icon" title="SAĞLIĞIM" onclick="goToOfferForm('health', 105)">
+              <img src="{% static 'img/health.png' %}" alt="Sağlık">
+            </div>
+            <div class="form-icon" title="SEYAHATİM" onclick="goToOfferForm('travel', 106)">
+              <img src="{% static 'img/travel.png' %}" alt="Seyahat">
+            </div>
+            <div class="form-icon" title="İŞYERİM">
+              <img src="{% static 'img/business.png' %}" alt="İşletme">
+            </div>
+            <div class="form-icon" title="GÜVENCEM - IMM" onclick="goToOfferForm('imm', 113)">
+              <img src="{% static 'img/insurance-agent.png' %}" alt="IMM">
+            </div>
+            <div class="form-icon" title="ASİSTANIM" onclick="goToOfferForm('assistant', 109)">
+              <img src="{% static 'img/truck.png' %}" alt="FerdiKaza">
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sol Taraf (Ana İçerik) -->
+            <div class="col-md-9">
+                <!-- Üst İstatistik Kartları -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary-soft">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p>Poliçe Adet</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary-soft">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p>Teklif Adet</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-primary-soft">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div class="stat-info">
+                                <p>Varlık Adet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Diğer stat kartları aynı kalacak -->
+                </div>
+
+                <!-- Sekmeli Panel -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link active" data-bs-toggle="tab" href="#teklifler" role="tab">
+                                          Teklifler
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#policeler" role="tab">Poliçeler</a>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#varliklar" role="tab">
+                                          Varlıklar
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#leadler" role="tab">
+                                          Leadler
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#contacts" role="tab">
+                                          İletişim
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#talepler" role="tab">
+                                          Talepler
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#izinler" role="tab">
+                                          İzinler
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#sms" role="tab">
+                                          SMS
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#iliskiler" role="tab">İlişkiler</a>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content mt-3">
+                                  <div class="tab-pane fade show active" id="teklifler" data-loaded="false">
+                                    <div class="text-muted text-center py-3">Yükleniyor...</div>
+                                  </div>
+
+                                  <div class="tab-pane fade" id="policeler" data-loaded="false">
+                                    <div class="text-muted text-center py-3">Yükleniyor...</div>
+                                  </div>
+
+                                  <div class="tab-pane fade" id="iliskiler" data-loaded="false">
+                                    <div class="text-muted text-center py-3">Yükleniyor...</div>
+                                  </div>
+                                   <div class="tab-pane fade" id="contacts" data-loaded="false">
+                                    <div class="text-muted text-center py-3">Yükleniyor...</div>
+                                   </div>
+                                    <div class="tab-pane fade" id="varliklar" data-loaded="false">
+                                      <div class="text-muted text-center py-3">Yükleniyor...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+<!-- Sağ Taraf -->
+<div class="col-md-3">
+  <div class="card mb-4">
+    <div class="card-body text-center">
+
+      <!-- Profil Resmi -->
+      <div class="profile-image mb-3">
+        <img src="{% if customer.image_url %}{{ customer.image_url }}{% else %}{% static 'img/customer_default.png' %}{% endif %}"
+             class="rounded-circle" alt="Profil" width="120" height="120">
+      </div>
+
+      <!-- İsim ve Rol -->
+      <h5 class="mb-1">{{ customer.full_name|default:"-" }}</h5>
+      <p class="text-muted small">Müşteri</p>
+
+      <!-- İletişim İkonları -->
+        <div class="contact-icons mb-3">
+          {% if primary_phone %}
+            <i class="fas fa-phone text-success" title="{{ primary_phone }}"></i>
+            <i class="fab fa-whatsapp text-success" title="{{ primary_phone }}"></i>
+          {% endif %}
+          {% if primary_email %}
+            <i class="fas fa-envelope text-primary" title="{{ primary_email }}"></i>
+          {% endif %}
+          <i class="fas fa-comment-sms text-warning"></i>
+        </div>
+
+
+      <!-- Bilgi Alanları -->
+      <div class="customer-info text-start">
+        <div class="info-item">
+          <span class="label">T.C. Kimlik No:</span>
+          <span class="value">{{ customer.identity_number|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Doğum Tarihi:</span>
+          <span class="value">{{ customer.birth_date|date:"d.m.Y"|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">İl:</span>
+          <span class="value">{{ customer.Riziko_il_kod|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">İlçe:</span>
+          <span class="value">{{ customer.Riziko_ilce_kodu|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Kayıt Tarihi:</span>
+          <span class="value">{{ customer.created_at|date:"d.m.Y H:i" }}</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+
+                <!-- Zaman Tüneli -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Aktiviteler</h5>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-dot bg-primary"></div>
+                                <div class="timeline-content">
+                                    <div class="time">10.01.2024 - 10:35</div>
+                                    <div class="desc">Yeni poliçe teklifi oluşturuldu</div>
+                                </div>
+                            </div>
+                            <!-- Daha fazla aktivite -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+</body>
+</html>
+
+
+<!-- 🔽 Modal: Sigorta Ettiren Seçimi -->
+<div class="modal fade" id="relationshipModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content rounded-3 shadow">
+
+      <!-- Başlık -->
+      <div class="modal-header" >
+        <h5 class="modal-title text-black mx-auto fw-semibold">Sigorta Ettiren Seçimi</h5>
+        <button type="button" class="btn-close btn-close-white position-absolute end-0 me-3" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Uyarı -->
+        <div class="alert alert-warning d-flex align-items-center justify-content-center text-center gap-2" role="alert">
+          <i class="fas fa-exclamation-triangle me-2 text-warning" style="font-size: 1.2rem;"></i>
+          <span class="fw-medium">18 yaş altı sigortalılar için lütfen listeden bir sigorta ettiren seçiniz.</span>
+        </div>
+
+        <!-- Liste -->
+        <div class="list-group small mt-3" id="relationshipList">
+          <!-- JavaScript ile ilişki listesi buraya basılacak -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 🔽 Modal: Yeni İlişki Ekle -->
+<div class="modal fade" id="newRelationshipModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header" style="background-color: #e1b45f;">
+        <h5 class="modal-title text-white">Yeni İlişki Ekle</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="newRelationshipForm">
+          <div class="mb-3">
+            <label for="identity_number" class="form-label">T.C. Kimlik No</label>
+            <input type="text" class="form-control" id="identity_number" name="identity_number" maxlength="11" placeholder="11 haneli T.C. No" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="birth_date" class="form-label">Doğum Tarihi</label>
+            <input type="date" class="form-control" id="birth_date" name="birth_date" required>
+          </div>
+
+          <div class="mb-3 text-end">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="sorgulaIliskiKisi()">Sorgula</button>
+          </div>
+
+          <div class="mb-3">
+            <label for="full_name" class="form-label">Ad Soyad</label>
+            <input type="text" class="form-control" id="full_name" name="full_name" readonly>
+          </div>
+
+          <div class="mb-3">
+            <label for="relationship_type" class="form-label">İlişki Türü</label>
+            <select class="form-select" id="relationship_type" name="relationship_type" required>
+              <option value="" selected disabled>Seçiniz</option>
+              <!-- 🔁 JS ile doldurulacak -->
+            </select>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            <button type="submit" class="btn btn-danger" style="background-color: #e1b45f;">Kaydet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/customer.js' %}"></script>
+<script src="{% static 'js/utils_customer.js' %}"></script>
+<script src="{% static 'js/customer_tab.js' %}"></script>
+
+<script>
+  window.customerKey = "{{ customer.customer_key }}";
+  window.customerIdentityNumber = "{{ customer.identity_number }}";
+  window.agency_id = "{{ request.user.agency.id }}";
+  window.user_id = "{{ request.user.id }}";
+  window.birthDate = "{% if customer.birth_date %}{{ customer.birth_date|date:'Y-m-d' }}{% else %}''{% endif %}";
+  window.hasPrimaryPhone = {{ has_primary_phone|yesno:"true,false" }};
+  window.hasCustomerRelation = {{ has_relation|yesno:"true,false" }};
+  window.customerId = "{{ customer.id|default:'' }}";
+</script>
+
+{% endblock %}

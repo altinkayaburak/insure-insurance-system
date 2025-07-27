@@ -1,0 +1,569 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  /* 🔵 Edit Butonu – #3057c7 */
+  .btn-blue {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    color: #fff !important;
+  }
+  .btn-blue:hover {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    opacity: 0.9;
+  }
+
+  /* 🔴 Template Butonu – #dc4a41 */
+  .btn-red {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: #fff !important;
+  }
+  .btn-red:hover {
+    background-color: #e1b45f !important;
+    border-color: #e1b45f !important;
+    opacity: 0.9;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+   /* 📌 Modal Genel */
+  .modal-content {
+    border-radius: 0.75rem;
+    border: none;
+    background-color: #ffffff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-dialog.modal-xxl {
+    max-width: 90%;
+  }
+
+  .modal-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: #212529;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    color: #212529;
+    font-size: 14px;
+  }
+
+  .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
+  }
+
+  /* 🧾 Şablon textarea alanı */
+  .template-editor {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    color: #212529;
+    border: 1px solid #ced4da;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    height: 500px;
+    resize: vertical;
+  }
+
+  /* 🟧 Turuncu Kaydet Butonu */
+  .btn-save-orange {
+    background-color: #291f69 !important;
+    border-color: #291f69 !important;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.4rem;
+  }
+
+    .modal-header {
+    padding: 1rem 1.5rem;
+  }
+  .modal-title {
+    font-size: 18px;
+  }
+
+
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+}
+
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+
+</style>
+
+<div class="container mt-5">
+<!-- 🔼 Başlık ve Ekle Butonu -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold mb-0">Transfer Servis Listesi</h4>
+      <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm" onclick="openTransferAddModal()">
+        <i class="bi bi-plus-circle me-2"></i>Yeni Transfer Servisi
+      </button>
+    </div>
+
+  <!-- 🔍 Arama -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Transfer servisi ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+<!-- 📋 Tablo -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" id="serviceTableFull" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #5c3d99;">
+          <tr>
+            <th>ID</th>
+            <th>Sigorta Şirketi</th>
+            <th>Servis Adı</th>
+            <th>SOAP Action</th>
+            <th>Detay Servis?</th>
+            <th>İlk Serviste?</th>
+            <th class="text-center">İşlem</th>
+          </tr>
+        </thead>
+            <tbody>
+              {% for service in page_obj %}
+              <tr>
+                <td>{{ service.id }}</td>
+                <td>{{ service.insurance_company.name }}</td>
+                <td>{{ service.service_name }}</td>
+                <td>{{ service.soap_action|truncatechars:50 }}</td>
+                <td>{{ service.requires_detail_service|yesno:"Evet,Hayır" }}</td>
+                <td>{{ service.has_full_detail_in_first_service|yesno:"Evet,Hayır" }}</td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-blue" onclick="editTransferService({{ service.id }})">Edit</button>
+                  <button class="btn btn-sm btn-red" onclick="editTransferTemplate({{ service.id }})">Template</button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">Transfer servisi bulunamadı.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+  <!-- 🔽 Sayfalama -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a>
+      </li>
+      {% endif %}
+      {% for num in page_range %}
+      {% if num == '...' %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+      <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+        <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+      </li>
+      {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+
+<!-- Add/Edit Modal for Transfer Service -->
+<div class="modal fade" id="transferServiceModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <form id="transferServiceForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Yeni Transfer Servisi</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="transfer_service_id">
+          <div class="mb-3">
+            <label class="form-label">Sigorta Şirketi</label>
+            <select class="form-select" id="transfer_insurance_company" required></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Servis Adı</label>
+            <input type="text" class="form-control" id="transfer_service_name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">URL</label>
+            <input type="text" class="form-control" id="transfer_url" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">SOAP Action</label>
+            <input type="text" class="form-control" id="transfer_soap_action">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Poliçe Path</label>
+            <input type="text" class="form-control" id="transfer_policy_list_path">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Hata Mesajı Path</label>
+            <input type="text" class="form-control" id="transfer_error_field_path">
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="transfer_requires_detail_service">
+            <label class="form-check-label" for="transfer_requires_detail_service">Detay Servis Gerekli mi?</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="transfer_has_full_detail_in_first_service">
+            <label class="form-check-label" for="transfer_has_full_detail_in_first_service">Detaylar İlk Serviste mi?</label>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Detay Servis ID</label>
+            <input type="number" class="form-control" id="transfer_detail_service_id" disabled>
+          </div>
+        </div>
+        <div class="modal-footer bg-white">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">İptal</button>
+          <button type="submit" class="btn btn-save-orange">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- SOAP Template Modal for Transfer Service -->
+<div class="modal fade" id="transferSoapTemplateModal" tabindex="-1">
+  <div class="modal-dialog modal-xxl">
+    <div class="modal-content">
+      <form id="transferSoapTemplateForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Transfer SOAP Şablonu Düzenle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="transfer_template_service_id">
+
+          <label class="form-label">SOAP Template</label>
+          <textarea id="transfer_soap_template" class="form-control template-editor mb-3" style="min-height: 300px;"></textarea>
+
+          <label class="form-label">Request Template</label>
+          <textarea id="transfer_request_template" class="form-control template-editor" style="min-height: 300px;"></textarea>
+        </div>
+        <div class="modal-footer bg-white">
+          <button type="submit" class="btn btn-save-orange">
+            <i class="bi bi-save me-1"></i> Kaydet
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const TRANSFER_API_SERVICES = '/database/transfer/services/';
+const TRANSFER_API_COMPANIES = '/database/api/companies/';
+let transferCompanies = [];
+
+// 🧠 CSRF Token Getter
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// 📡 Sigorta şirketlerini çek ve dropdown doldur
+async function fetchTransferCompanies(selected = null) {
+    const response = await fetch(TRANSFER_API_COMPANIES);
+    transferCompanies = await response.json();
+    const select = document.getElementById("transfer_insurance_company");
+    select.innerHTML = transferCompanies.map(c =>
+        `<option value="${c.id}" ${selected == c.id ? 'selected' : ''}>${c.name}</option>`
+    ).join("");
+}
+
+// ➕ Yeni kayıt modalı açılır
+function openTransferAddModal() {
+    document.getElementById("transferServiceForm").reset();
+    document.getElementById("transfer_service_id").value = "";
+    resetTransferDetailFields();
+    fetchTransferCompanies();
+    new bootstrap.Modal(document.getElementById("transferServiceModal")).show();
+}
+
+// ✏️ Var olan kayıt modal ile düzenlenir
+async function editTransferService(id) {
+    const response = await fetch(`${TRANSFER_API_SERVICES}${id}/`);
+    const data = await response.json();
+
+    document.getElementById("transfer_service_id").value = data.id;
+    document.getElementById("transfer_service_name").value = data.service_name;
+    document.getElementById("transfer_url").value = data.url;
+    document.getElementById("transfer_soap_action").value = data.soap_action;
+    document.getElementById("transfer_policy_list_path").value = data.policy_list_path || "";
+    document.getElementById("transfer_error_field_path").value = data.error_field_path || "";
+    document.getElementById("transfer_requires_detail_service").checked = data.requires_detail_service;
+    document.getElementById("transfer_has_full_detail_in_first_service").checked = data.has_full_detail_in_first_service;
+    document.getElementById("transfer_detail_service_id").value = data.detail_service_id || "";
+    document.getElementById("transfer_detail_service_id").disabled = !data.requires_detail_service;
+
+    // Çakışma düzeltmesi
+    if (data.requires_detail_service && data.has_full_detail_in_first_service) {
+        document.getElementById("transfer_has_full_detail_in_first_service").checked = false;
+    }
+
+    await fetchTransferCompanies(data.insurance_company);
+    new bootstrap.Modal(document.getElementById("transferServiceModal")).show();
+}
+
+// ✏️ SOAP şablonu düzenleme modalı
+async function editTransferTemplate(id) {
+    const response = await fetch(`${TRANSFER_API_SERVICES}${id}/`);
+    const data = await response.json();
+
+    document.getElementById("transfer_template_service_id").value = data.id;
+
+    // 🔽 Her iki alanı ayrı ayrı doldur
+    document.getElementById("transfer_soap_template").value = data.soap_template?.trim() || "";
+    document.getElementById("transfer_request_template").value = data.request_template?.trim() || "";
+
+    new bootstrap.Modal(document.getElementById("transferSoapTemplateModal")).show();
+}
+
+// 💾 Transfer servis formu submit
+document.getElementById("transferServiceForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const id = document.getElementById("transfer_service_id").value;
+    const requiresDetail = document.getElementById("transfer_requires_detail_service").checked;
+    const fullDetail = document.getElementById("transfer_has_full_detail_in_first_service").checked;
+    const detailServiceIdRaw = document.getElementById("transfer_detail_service_id").value;
+
+    const payload = {
+        insurance_company: parseInt(document.getElementById("transfer_insurance_company").value),
+        service_name: document.getElementById("transfer_service_name").value.trim(),
+        url: document.getElementById("transfer_url").value.trim(),
+        soap_action: document.getElementById("transfer_soap_action").value.trim(),
+        policy_list_path: document.getElementById("transfer_policy_list_path").value.trim(),
+        error_field_path: document.getElementById("transfer_error_field_path").value.trim(),
+        requires_detail_service: requiresDetail,
+        has_full_detail_in_first_service: fullDetail,
+        is_active: true
+    };
+
+    if (requiresDetail && detailServiceIdRaw) {
+        const detailServiceId = parseInt(detailServiceIdRaw);
+        if (!isNaN(detailServiceId)) {
+            payload["detail_service"] = detailServiceId;
+        }
+    }
+
+    const method = id ? "PUT" : "POST";
+    const url = id ? `${TRANSFER_API_SERVICES}${id}/update/` : `${TRANSFER_API_SERVICES}new/`;
+
+    await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById("transferServiceModal")).hide();
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    location.reload(); // Tabloyu yeniden render etmek için sayfa yenilenir
+});
+
+// 💾 SOAP şablonu formu submit
+document.getElementById("transferSoapTemplateForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const id = document.getElementById("transfer_template_service_id").value;
+    const soapTemplate = document.getElementById("transfer_soap_template").value;
+    const requestTemplate = document.getElementById("transfer_request_template").value; // 👈 yeni alan
+
+    await fetch(`${TRANSFER_API_SERVICES}${id}/template/`, {
+        method: "PATCH",
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            soap_template: soapTemplate,
+            request_template: requestTemplate  // 👈 gönder
+        })
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById("transferSoapTemplateModal")).hide();
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+});
+
+
+// 🧩 Detay servis kontrol yapısı
+const requiresDetailCheckbox = document.getElementById("transfer_requires_detail_service");
+const fullDetailCheckbox = document.getElementById("transfer_has_full_detail_in_first_service");
+const detailServiceIdInput = document.getElementById("transfer_detail_service_id");
+
+function resetTransferDetailFields() {
+    requiresDetailCheckbox.checked = false;
+    fullDetailCheckbox.checked = false;
+    detailServiceIdInput.disabled = true;
+    detailServiceIdInput.value = "";
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    resetTransferDetailFields();
+
+    // Arama kutusu enter ile arama yapar
+    const searchInput = document.getElementById("searchBox");
+    searchInput?.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            window.location.href = `?q=${encodeURIComponent(query)}`;
+        }
+    });
+
+    window.clearSearch = function () {
+        window.location.href = window.location.pathname;
+    };
+});
+
+// Detay servis seçilirse input aktif
+requiresDetailCheckbox.addEventListener("change", function () {
+    if (this.checked) {
+        detailServiceIdInput.disabled = false;
+        fullDetailCheckbox.checked = false;
+    } else {
+        detailServiceIdInput.disabled = true;
+        detailServiceIdInput.value = "";
+    }
+});
+
+// Full detail seçilirse diğerleri pasif olur
+fullDetailCheckbox.addEventListener("change", function () {
+    if (this.checked) {
+        requiresDetailCheckbox.checked = false;
+        detailServiceIdInput.disabled = true;
+        detailServiceIdInput.value = "";
+    }
+});
+</script>
+
+
+
+
+{% endblock %}

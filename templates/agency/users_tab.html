@@ -1,0 +1,366 @@
+
+<!-- ✅ Tüm Sayfa için CSS (Kırmızı Temalı - #291f69 uyumlu) -->
+<style>
+  /* 🔴 Butonlar */
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .btn-light {
+    background-color: #f8f9fa;
+  }
+
+  /* 📌 Modal Başlıkları */
+  .modal-header.bg-danger {
+    background-color: #291f69 !important;
+    color: white;
+  }
+  .modal-title {
+    font-weight: 600;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧩 Modal içi padding */
+  .modal-body {
+    padding: 1.5rem;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+
+    .is-invalid {
+  border: 1px solid #dc3545 !important;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+
+</style>
+
+
+<div class="container mt-5">
+
+  <!-- 🔼 Başlık ve Yeni Kullanıcı Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Kullanıcı Listesi</h4>
+
+    <!-- ✅ Yeni Kullanıcı Ekle Butonu -->
+    <button id="openUserModalBtn" type="button" class="btn btn-danger btn-sm px-3 py-2 shadow-sm">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Kullanıcı
+    </button>
+  </div>
+
+
+<div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+  <div class="input-group">
+    <span class="input-group-text border bg-white">
+      <i class="bi bi-search text-muted"></i>
+    </span>
+    <input type="text" id="searchBox" class="form-control border" placeholder="Kullanıcı ara..." value="{{ query }}">
+  </div>
+  {% if query %}
+  <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+    <i class="bi bi-x-lg"></i>
+  </button>
+  {% endif %}
+</div>
+
+  <!-- 📋 Tablo -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #291f69;">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>Adı Soyadı</th>
+            <th>Kullanıcı Adı</th>
+            <th>Şube</th>
+            <th>Departman</th>
+            <th>Ünvan</th>
+            <th>Rol</th>
+            <th>Yönetici</th> <!-- ✅ Yeni eklenen sütun -->
+            <th class="text-center pe-3">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted small">{{ user.id }}</td>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+            <td class="fw-medium">{{ user.username }}</td>
+            <td>{{ user.branch.name|default:"-" }}</td>
+            <td>{{ user.department.name|default:"-" }}</td>
+            <td>{{ user.title.name|default:"-" }}</td>
+            <td>{{ user.role.name|default:"-" }}</td>
+            <td>
+              {% if user.manager %}
+                {{ user.manager.first_name }} {{ user.manager.last_name }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-center pe-3">
+              <div class="d-flex justify-content-center gap-2">
+                <!-- ✏️ Edit -->
+                <button class="btn btn-sm btn-light user-edit-btn" data-id="{{ user.id }}">
+                  <i class="bi bi-pencil text-danger"></i>
+                </button>
+                <!-- ✅ Kullanıcı Aktif/Pasif Toggle Butonu -->
+                <button class="toggle-icon-btn" data-id="{{ user.id }}" title="Durum Değiştir">
+                  {% if user.is_active %}
+                    <i class="bi bi-toggle-on" style="color: #3057c7; font-size: 1.5rem;"></i>
+                  {% else %}
+                    <i class="bi bi-toggle-off text-secondary" style="font-size: 1.5rem;"></i>
+                  {% endif %}
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center text-muted py-4">Kullanıcı bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+ <!-- Sayfalama -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-center py-3">
+  <ul class="pagination pagination-sm mb-0">
+
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <button class="page-link user-page-btn" data-page="{{ page_obj.previous_page_number }}">«</button>
+      </li>
+    {% endif %}
+
+    {% for num in page_range %}
+      {% if num == '...' %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+          <button class="page-link user-page-btn" data-page="{{ num }}">{{ num }}</button>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <button class="page-link user-page-btn" data-page="{{ page_obj.next_page_number }}">»</button>
+      </li>
+    {% endif %}
+
+  </ul>
+</div>
+{% endif %}
+</div>
+
+
+<!-- ✅ Yeni Kullanıcı Ekle Modal -->
+<div id="addUserModal" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <!-- Modal Başlık -->
+      <div class="modal-header bg-white">
+        <h5 class="modal-title">Yeni Kullanıcı Ekle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Modal İçerik -->
+      <div class="modal-body">
+        <form id="addUserForm">
+          {% csrf_token %}
+
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label class="form-label">Kullanıcı UUID</label>
+              <input type="text" id="userUUIDInput" name="key_guid" class="form-control" readonly>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Kimlik No</label>
+                <input type="text" name="identity_no" class="form-control" id="identityInput" maxlength="11" inputmode="numeric" pattern="\d{11}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Doğum Tarihi</label>
+              <input type="date" name="birth_date" class="form-control">
+            </div>
+          </div>
+            <div class="row mb-3">
+              <div class="col-md-12 text-end">
+                <button type="button" class="btn btn-sm text-white" style="background-color: #3057c7;" onclick="searchUserInfo()">
+                  <i class="bi bi-search me-1"></i> Ara
+                </button>
+              </div>
+            </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Ad</label>
+              <input type="text" name="first_name" class="form-control" required readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Soyad</label>
+              <input type="text" name="last_name" class="form-control" required readonly>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">E-posta</label>
+              <input type="email" name="email" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Telefon Numarası</label>
+             <input type="text" name="phone_number" id="phoneInput" class="form-control" inputmode="numeric" maxlength="10" placeholder="5XXXXXXXXX">
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Kullanıcı Adı</label>
+              <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Şube</label>
+              <select name="branch" class="form-select" required>
+                <option value="">Şube Seçin</option>
+                {% for branch in branches %}
+                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Departman</label>
+              <select name="department" class="form-select" required>
+                <option value="">Departman Seçin</option>
+                {% for department in departments %}
+                <option value="{{ department.id }}">{{ department.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ünvan</label>
+              <select name="title" class="form-select" required>
+                <option value="">Ünvan Seçin</option>
+                {% for title in titles %}
+                <option value="{{ title.id }}">{{ title.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Rol</label>
+              <select name="role" class="form-select" required>
+                <option value="">Rol Seçin</option>
+                {% for role in roles %}
+                <option value="{{ role.id }}">{{ role.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Yönetici</label>
+              <select name="manager" class="form-select">
+                <option value="">Yönetici Seçin</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+                <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button id="addUserSaveBtn" type="submit" class="btn btn-primary">Kaydet</button>
+      </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+

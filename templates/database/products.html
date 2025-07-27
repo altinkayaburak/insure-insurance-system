@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- 🎨 Stil -->
+<!-- ✅ Tüm Sayfa için CSS (Kırmızı Temalı - #291f69 uyumlu) -->
+<style>
+  /* 🔴 Butonlar */
+  .btn-danger {
+    background-color: #291f69;
+    border-color: #291f69;
+  }
+  .btn-danger:hover {
+    background-color: #e1b45f;
+    border-color: #e1b45f;
+  }
+  .btn-light {
+    background-color: #f8f9fa;
+  }
+
+
+  .modal-title {
+    font-weight: 600;
+  }
+
+  /* 📄 Sayfalama */
+  .page-link {
+    color: #291f69;
+    border: 1px solid #e5e7eb;
+    padding: 0.3rem 0.6rem;
+    font-size: 13px;
+  }
+  .page-link:hover {
+    background-color: #fef2f0;
+    color: #291f69;
+  }
+  .page-item.active .page-link {
+    background-color: #291f69;
+    border-color: #291f69;
+    color: white;
+  }
+
+  /* 🏷️ Durum Etiketleri */
+  .badge.bg-status-active {
+    background-color: rgba(239, 94, 83, 0.1);
+    color: #291f69;
+  }
+  .badge.bg-status-passive {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+  }
+
+  /* 📋 Tablo */
+  .table {
+    font-size: 14px;
+  }
+  .table th,
+  .table td {
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table thead {
+    background-color: #291f69;
+    color: white;
+  }
+
+  /* 🧾 Kartlar */
+  .card {
+    border: none;
+    border-radius: 0.5rem;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+
+  /* 🔽 Responsive */
+  .table-responsive {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* 🧼 Formlar */
+  .form-label {
+    font-weight: 500;
+    color: #495057;
+  }
+
+  /* 🧩 Modal içi padding */
+  .modal-body {
+    padding: 1.5rem;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* 🧭 Buton simgeleri */
+  .edit-btn i {
+    font-size: 1rem;
+  }
+</style>
+
+
+
+<div class="container mt-5">
+
+  <!-- 🔼 Başlık ve Ekle Butonu -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Ürün Listesi</h4>
+    <button class="btn btn-danger btn-sm px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Ürün
+    </button>
+  </div>
+
+  <!-- 🔍 Arama -->
+  <div class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <div class="input-group">
+      <span class="input-group-text border bg-white"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchBox" class="form-control border" placeholder="Ürün ara..." value="{{ query }}">
+    </div>
+    {% if query %}
+    <button class="btn btn-light border" onclick="clearSearch()" title="Temizle">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    {% endif %}
+  </div>
+
+<!-- 📋 Tablo -->
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    <div class="table-responsive px-2">
+      <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 14px;">
+        <thead class="text-white" style="background-color: #7951aa;">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>Ürün Kodu</th>
+            <th>Ürün Adı</th>
+            <th>Şirket</th>
+            <th class="text-center pe-3">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted small">{{ product.id }}</td>
+            <td class="fw-medium">{{ product.code }}</td>
+            <td>{{ product.name }}</td>
+            <td class="text-muted small">{{ product.company.name }}</td>
+            <td class="text-center pe-3">
+              <button class="btn btn-sm btn-light edit-btn"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editProductModal"
+                      data-id="{{ product.id }}"
+                      data-code="{{ product.code }}"
+                      data-name="{{ product.name }}"
+                      data-company-id="{{ product.company.id }}"
+                      data-main-branch-id="{{ product.main_branch.id|default:'' }}"
+                      data-branch-id="{{ product.branch.id|default:'' }}">
+                <i class="bi bi-pencil text-danger"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">Ürün bulunamadı.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- 🔽 Sayfalama -->
+{% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center py-3">
+    <ul class="pagination pagination-sm mb-0">
+
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">«</a>
+        </li>
+      {% endif %}
+
+      {% for num in page_range %}
+        {% if num == '...' %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% else %}
+          <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?q={{ query }}&page={{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?q={{ query }}&page={{ page_obj.next_page_number }}">»</a>
+        </li>
+      {% endif %}
+
+    </ul>
+  </div>
+{% endif %}
+
+
+
+<!-- ➕ Yeni Ürün Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3 shadow-sm">
+      <div class="modal-header text-black">
+        <h5 class="modal-title">Yeni Ürün</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addProductForm">
+          {% csrf_token %}
+          <div class="mb-3"><label class="form-label">Ürün Kodu</label><input type="text" name="code" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Ürün Adı</label><input type="text" name="name" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Sigorta Şirketi</label>
+            <select name="company_id" class="form-select" required>
+              <option value="">Seçiniz</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ana Branş</label>
+            <select name="main_branch_id" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for main in main_branches %}
+              <option value="{{ main.id }}">{{ main.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Alt Branş</label>
+            <select name="branch_id" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for branch in branches %}
+              <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button class="btn btn-primary" onclick="submitProduct()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✏️ Düzenleme Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3 shadow-sm">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Ürün Düzenle</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editProductForm">
+          {% csrf_token %}
+          <input type="hidden" id="editProductID" name="id">
+          <div class="mb-3"><label class="form-label">Ürün Kodu</label><input type="text" id="editCode" name="code" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Ürün Adı</label><input type="text" id="editName" name="name" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Sigorta Şirketi</label>
+            <select id="editCompany" name="company_id" class="form-select" required>
+              <option value="">Seçiniz</option>
+              {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ana Branş</label>
+            <select id="editMainBranch" name="main_branch_id" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for main in main_branches %}
+              <option value="{{ main.id }}">{{ main.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Alt Branş</label>
+            <select id="editBranch" name="branch_id" class="form-select">
+              <option value="">Seçiniz</option>
+              {% for branch in branches %}
+              <option value="{{ branch.id }}">{{ branch.name }} ({{ branch.code }})</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal">İptal</button>
+        <button class="btn btn-primary" onclick="updateProduct()">Güncelle</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🚀 JavaScript -->
+<script>
+  document.getElementById("searchBox").addEventListener("keypress", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const query = this.value.trim();
+      window.location.href = query ? "?q=" + encodeURIComponent(query) : window.location.pathname;
+    }
+  });
+
+  function clearSearch() {
+    window.location.href = window.location.pathname;
+  }
+
+  // 🖊️ Düzenle butonu tıklanınca modal alanlarını doldur
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('editProductID').value = btn.dataset.id;
+      document.getElementById('editCode').value = btn.dataset.code;
+      document.getElementById('editName').value = btn.dataset.name;
+      document.getElementById('editCompany').value = btn.dataset.companyId;
+      document.getElementById('editMainBranch').value = btn.dataset.mainBranchId;
+      document.getElementById('editBranch').value = btn.dataset.branchId;
+    });
+  });
+
+  function submitProduct() {
+    const form = document.getElementById("addProductForm");
+    const formData = new FormData(form);
+    fetch("{% url 'add_product' %}", {
+      method: "POST",
+      body: formData,
+      headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) location.reload();
+      else alert("Hata oluştu: " + data.error);
+    });
+  }
+
+  function updateProduct() {
+    const form = document.getElementById("editProductForm");
+    const formData = new FormData(form);
+    fetch("{% url 'update_product' %}", {
+      method: "POST",
+      body: formData,
+      headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) location.reload();
+      else alert("Hata oluştu: " + data.error);
+    });
+  }
+</script>
+
+
+{% endblock %}

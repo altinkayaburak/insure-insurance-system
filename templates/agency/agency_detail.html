@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  :root {
+    --primary-color: #5e71d3;
+    --secondary-color: #291f69;
+    --light-primary: #eef0f9;
+    --text-muted: #6c757d;
+  }
+
+  .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .nav-tabs .nav-link {
+    border: none;
+    color: var(--text-muted);
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: var(--primary-color);
+
+    background: none;
+  }
+
+  .nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+  }
+
+  .tab-content > .tab-pane:not(.active) {
+    display: none;
+  }
+
+  .card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1rem;
+  }
+
+  .table {
+    font-size: 0.9rem;
+  }
+
+  .table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    vertical-align: middle;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btn-square {
+    border-radius: 0 !important;
+    padding: 0.5rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .btn-square:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+  }
+
+  .text-muted {
+    color: var(--text-muted) !important;
+  }
+
+  .text-primary {
+    color: var(--primary-color) !important;
+  }
+
+
+  .pagination .page-link {
+    color: var(--primary-color);
+  }
+
+.toggle-icon-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-icon-btn i {
+  font-size: 1.5rem;
+  color: #3057c7;
+}
+
+
+
+</style>
+
+
+<div class="container-fluid">
+
+  <!-- ✅ Sekmeli Menü -->
+ <ul class="nav nav-tabs mb-4" id="agencyTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="agency-tab" data-bs-toggle="tab" data-bs-target="#agency" type="button" role="tab" aria-controls="agency" aria-selected="true">
+      Acente
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab" aria-controls="users" aria-selected="false">
+      Kullanıcılar
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="companies-tab" data-bs-toggle="tab" data-bs-target="#companies" type="button" role="tab" aria-controls="companies" aria-selected="false">
+      Şirketler
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="branches-tab" data-bs-toggle="tab" data-bs-target="#branches" type="button" role="tab" aria-controls="branches" aria-selected="false">
+      Şubeler
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="services-tab" data-bs-toggle="tab" data-bs-target="#services" type="button" role="tab" aria-controls="services" aria-selected="false">
+      Servisler
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="offer-services-tab" data-bs-toggle="tab" data-bs-target="#offer-services" type="button" role="tab" aria-controls="offer-services" aria-selected="false">
+      Teklif Servisleri
+    </button>
+  </li>
+   <li class="nav-item" role="presentation">
+  <button class="nav-link" id="transfer-services-tab" data-bs-toggle="tab" data-bs-target="#transfer-services" type="button" role="tab" aria-controls="transfer-services" aria-selected="false">
+    Transfer Servisleri
+  </button>
+    </li>
+</ul>
+
+
+  <!-- ✅ Sekme İçerikleri -->
+  <div class="tab-content" id="agencyTabsContent">
+    <div class="tab-pane fade show active" id="agency" role="tabpanel" aria-labelledby="agency-tab" data-loaded="false">
+      <div class="text-muted text-center py-3">Yükleniyor...</div>
+    </div>
+    <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab" data-loaded="false"></div>
+    <div class="tab-pane fade" id="companies" role="tabpanel" aria-labelledby="companies-tab" data-loaded="false"></div>
+    <div class="tab-pane fade" id="branches" role="tabpanel" aria-labelledby="branches-tab" data-loaded="false"></div>
+    <div class="tab-pane fade" id="services" role="tabpanel" aria-labelledby="services-tab" data-loaded="false"></div>
+    <div class="tab-pane fade" id="offer-services" role="tabpanel" aria-labelledby="offer-services-tab" data-loaded="false"></div>
+    <div class="tab-pane fade" id="transfer-services" role="tabpanel" aria-labelledby="transfer-services-tab" data-loaded="false">
+
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'js/agency_tab.js' %}"></script>
+
+
+{% endblock %}

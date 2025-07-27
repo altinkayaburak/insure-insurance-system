@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş Kodu (OTP)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #5e71d3;
+            margin: 0;
+            font-size: 28px;
+        }
+        .otp-code {
+            background-color: #f1f1f1;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #5e71d3;
+            margin: 30px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>INSAI Giriş Kodunuz</h1>
+    </div>
+
+    <p>Sayın {{ name }},</p>
+    <p>Hesabınıza giriş yapabilmeniz için aşağıdaki OTP (Tek Seferlik Şifre) kodunu kullanabilirsiniz:</p>
+
+    <div class="otp-code">
+        {{ otp_code }}
+    </div>
+
+    <p>Bu kod <strong>5 dakika</strong> süreyle geçerlidir. Lütfen bu süre içinde giriş işlemini tamamlayınız.</p>
+    <p>Bu işlem size ait değilse, herhangi bir işlem yapmadan bu e-postayı silebilirsiniz.</p>
+
+    <div class="footer">
+        <p>Bu e-posta otomatik olarak gönderilmiştir, lütfen yanıtlamayınız.</p>
+        <p>&copy; {% now "Y" %} INSAI. Tüm hakları saklıdır.</p>
+    </div>
+</div>
+</body>
+</html>

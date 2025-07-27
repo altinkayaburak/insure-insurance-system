@@ -1,0 +1,33 @@
+{% if assets %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Tür</th>
+          <th>Aktif Mi</th>
+          <th>Doğrulandı</th>
+          <th>Açıklama</th>
+          <th>Oluşturma</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assets %}
+        <tr>
+          <td>{{ a.id }}</td>
+          <td>{{ a.type }}</td>
+          <td>{{ a.aktif|yesno:"Evet,Hayır" }}</td>
+          <td>{{ a.verified|yesno:"Evet,Hayır" }}</td>
+          <td>{{ a.aciklama }}</td>
+          <td>{{ a.created_at|date:"d.m.Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="text-center text-muted my-4">
+    <i class="bi bi-house-x fs-1 mb-3"></i>
+    <div>Bu müşteriye ait kayıtlı varlık bulunamadı.</div>
+  </div>
+{% endif %}

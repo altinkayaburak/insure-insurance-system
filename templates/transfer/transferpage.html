@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+{% load custom_tags %}
+
+<style>
+
+  /* Sayfa üst boşluğu */
+  .container-fluid {
+    margin-top: 60px;
+  }
+
+  /* Sidebar ile arasındaki boşluk */
+  .content-wrapper {
+    margin-left: 60px;
+  }
+
+.custom-card {
+  background: #f8f9fa;
+  border-radius: 14px;
+  box-shadow: 0 1px 6px 0 rgba(60,72,88,.06);
+  border: none;
+  min-height: 120px;
+  max-width: 100%;
+}
+  .custom-date-card {
+    background: #f8f9fa;
+    border-radius: 14px;
+    border: 1.2px solid #e0e0e0;
+    height: 460px; /* Daha uzun yapıldı */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: 0 1px 2px 0 rgba(60,72,88,.04);
+  }
+
+.custom-date-card {
+  /* Kartın genel stilleri */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Yazı tipi */
+}
+
+
+
+.custom-date-card h6 {
+  position: relative;
+  padding-bottom: 10px;
+  font-size: 1.3rem; /* 20px'e yakın */
+}
+
+.custom-date-card h6::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 2px;
+  background: #3498db;
+}
+
+.custom-date-card .date-picker::placeholder {
+  color: #bdc3c7;
+  font-style: italic;
+}
+
+.custom-date-card .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stat-box {
+  background: #fff;
+  border-radius: 6px;
+  border: 1.2px solid #e0e0e0;
+  font-weight: 500;
+  font-size: 0.95rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  margin-right: 2px;
+  box-shadow: 0 1px 2px 0 rgba(60,72,88,.04);
+}
+.divider {
+  width: 100%;
+  height: 1.2px;
+  background: linear-gradient(90deg, #e0e0e0 60%, #f5f5f5 100%);
+}
+.pastel-icons i {
+  font-size: 1.25rem;
+  border-radius: 50%;
+  padding: 6px;
+  background: #f7f8fa;
+  box-shadow: 0 1px 2px 0 rgba(60,72,88,.04);
+}
+.pastel-blue { color: #7ec8e3; background: #eaf6fb; }
+.pastel-green { color: #8fd6b4; background: #eafaf3; }
+.pastel-yellow { color: #ffe29a; background: #fffbe6; }
+.pastel-purple { color: #b9a6e3; background: #f5f2fa; }
+.pastel-pink { color: #f7b6c2; background: #fdf2f6; }
+
+/* Tarih Picker Stilleri */
+.date-picker {
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.date-picker:focus {
+  border-color: #7ec8e3;
+  box-shadow: 0 0 0 0.25rem rgba(126, 200, 227, 0.25);
+}
+</style>
+<!-- Bootstrap 5 ve Bootstrap Icons CDN -->
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<div class="container-fluid py-4">
+  <div class="row g-3">
+   <!-- Sol Taraf - Tarih Seçim Kutusu -->
+<div class="col-12" style="width: 320px; min-width: 300px;">
+  <div class="custom-date-card p-3 d-flex flex-column" style="min-height: 100%; height: auto; flex-grow: 1;">
+    <h6 class="text-center mb-3 fw-semibold">Poliçe Transfer</h6>
+
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label small text-muted">Başlangıç</label>
+        <input type="date" class="form-control date-picker" placeholder="GG/AA/YYYY" id="startDate">
+      </div>
+      <div class="col-6">
+        <label class="form-label small text-muted">Bitiş</label>
+        <input type="date" class="form-control date-picker" placeholder="GG/AA/YYYY" id="endDate">
+      </div>
+    </div>
+
+    <button class="btn btn-primary w-100 mb-3" id="triggerAllTransfers">
+      <i class="bi bi-send-fill me-2"></i> Tümünü Transfer Et
+    </button>
+
+    <div class="mt-auto" id="global-transfer-summary">
+      {% if global_totals %}
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <div class="bg-light rounded p-2 text-center border">
+            <div class="small text-muted">Toplam Alınan</div>
+            <div class="fw-bold text-primary fs-6">{{ global_totals.total }}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2 text-center border">
+            <div class="small text-muted">Yeni Eklenen</div>
+            <div class="fw-bold text-success fs-6">{{ global_totals.created }}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2 text-center border">
+            <div class="small text-muted">Güncellenen</div>
+            <div class="fw-bold text-info fs-6">{{ global_totals.updated }}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2 text-center border">
+            <div class="small text-muted">Alınamayan</div>
+            <div class="fw-bold text-warning fs-6">{{ global_totals.skipped }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="text-end text-secondary small mb-2">
+        Son Transfer: <strong>
+          {% if global_totals.last_transfer %}
+            {{ global_totals.last_transfer|date:"d.m.Y H:i" }}
+          {% else %}
+            -
+          {% endif %}
+        </strong>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- 🔁 Otomatik Transferler -->
+    <div class="mt-2 p-2 rounded border" style="background-color: #f8f9fa;">
+      <h6 class="fw-semibold text-black text-center small mb-2">Son Otomatik Transferler</h6>
+      {% if last_auto_transfers %}
+        <div class="table-responsive small">
+          <table class="table table-sm table-bordered align-middle mb-0 bg-white">
+            <thead class="table-light text-center">
+              <tr>
+                <th class="small">Tarih</th>
+                <th class="small">Şirket</th>
+                <th class="small">Toplam</th>
+                <th class="small">Yeni</th>
+                <th class="small">Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in last_auto_transfers %}
+              <tr class="text-center">
+                <td>{{ log.started_at|date:"d.m H:i" }}</td>
+                <td>{{ log.company.name }}</td>
+                <td>{{ log.total_count }}</td>
+                <td class="text-success fw-semibold">{{ log.created_count }}</td>
+                <td>
+                  {% if log.success %}
+                    <span class="badge bg-success">Başarılı</span>
+                  {% else %}
+                    <span class="badge bg-danger">Hatalı</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-black text-center mb-0">Kayıt bulunamadı.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- Sağ Taraf - Sigorta Kutuları -->
+<div class="col-md-9 col-12">
+  <div class="row g-3">
+    {% for company in company_cards %}
+    <div class="col-md-6 col-12">
+      <div class="custom-card d-flex flex-column px-3 py-2 h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <img src="{% static company.logo %}" alt="{{ company.name }}" width="75" height="75" class="me-2" style="object-fit:contain;">
+            <span class="fw-semibold fs-6 ms-1">{{ company.name }}</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <div class="stat-box text-primary" id="stat-total-{{ company.slug }}" title="Toplam Alınan">0</div>
+            <div class="stat-box text-success" id="stat-created-{{ company.slug }}" title="Yeni Eklenen">0</div>
+            <div class="stat-box text-info" id="stat-updated-{{ company.slug }}" title="Güncellenen">0</div>
+            <div class="stat-box text-warning" id="stat-skipped-{{ company.slug }}" title="Alınamadı">0</div>
+          </div>
+        </div>
+
+        <div class="divider my-2"></div>
+
+        <div class="d-flex justify-content-between align-items-end">
+        <div class="d-flex gap-2 pastel-icons">
+          {% if company.has_credit_card_task %}
+            <i class="bi bi-credit-card-2-back pastel-purple fs-2 cursor-pointer"
+               title="Kredi Kartı Bilgisi Getir"
+               onclick="triggerCreditCardTask({{ company.company_id }})"></i>
+          {% endif %}
+        </div>
+          <button class="btn btn-outline-primary btn-sm px-2 py-1"
+                  onclick="triggerCompanyTransfer(this)"
+                  data-company-id="{{ company.company_id }}"
+                  data-company-slug="{{ company.slug }}">
+            Transfer Et
+          </button>
+        </div>
+
+        <!-- ✅ Yeni alanlar -->
+        <div id="transfer-status-{{ company.slug }}" class="small text-muted mt-2"></div>
+        <div id="transfer-timestamp-{{ company.slug }}" class="small text-end text-secondary mt-1">
+          Son Transfer : <strong>
+            {% with latest_logs|get_item:company.company_id as log %}
+              {% if log and log.finished_at %}
+                {{ log.finished_at|date:"d.m.Y H:i" }}
+              {% else %}
+                -
+              {% endif %}
+            {% endwith %}
+          </strong>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div> <!-- row -->
+</div> <!-- col-md-9 -->
+
+<script src="{% static 'js/utils_customer.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/tr.js"></script>
+
+<script>
+
+// ✅ CSRF al
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+// ✅ Flatpickr yükle
+document.addEventListener('DOMContentLoaded', function () {
+  flatpickr("#startDate", {
+    dateFormat: "d/m/Y",
+    locale: "tr",
+    maxDate: new Date(),
+    defaultDate: null
+  });
+
+  flatpickr("#endDate", {
+    dateFormat: "d/m/Y",
+    locale: "tr",
+    maxDate: new Date(),
+    defaultDate: null
+  });
+});
+
+// ✅ Tarihleri al
+function getSelectedDates() {
+  const startInput = document.getElementById("startDate");
+  const endInput = document.getElementById("endDate");
+  const start = startInput.value;
+  const end = endInput.value;
+
+  if (!start || !end) {
+    showGlobalModalPopup("Lütfen tarihleri seçiniz.");
+    return null;
+  }
+
+  const s = moment(start, "DD/MM/YYYY");
+  const e = moment(end, "DD/MM/YYYY");
+  const diff = e.diff(s, "days");
+
+  if (diff < 0 || diff > 30) {
+    showGlobalModalPopup("Tarih aralığı geçersiz.");
+    return null;
+  }
+
+  return { start_date: start, end_date: end };
+}
+
+async function triggerCompanyTransfer(button, externalStart = null, externalEnd = null) {
+  const companyId = button.getAttribute("data-company-id");
+  const slug = button.getAttribute("data-company-slug");
+
+  const statTotal = document.getElementById(`stat-total-${slug}`);
+  const statCreated = document.getElementById(`stat-created-${slug}`);
+  const statUpdated = document.getElementById(`stat-updated-${slug}`);
+  const statSkipped = document.getElementById(`stat-skipped-${slug}`);
+  const statusDiv = document.getElementById(`transfer-status-${slug}`);
+  const timeDiv = document.getElementById(`transfer-timestamp-${slug}`);
+
+  const dates = getSelectedDates();
+  const startDate = externalStart || dates?.start_date;
+  const endDate = externalEnd || dates?.end_date;
+  if (!startDate || !endDate) return;
+
+  button.disabled = true;
+  button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Bekleniyor...`;
+  statusDiv.innerText = "⏳ Kuyruğa alındı...";
+  statTotal.innerText = 0;
+  statCreated.innerText = 0;
+  statUpdated.innerText = 0;
+  statSkipped.innerText = 0;
+  button.closest(".custom-card").style.opacity = "0.6";
+
+  const response = await fetch("/transfer/run/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken")
+    },
+    body: JSON.stringify({ company_id: companyId, start_date: startDate, end_date: endDate })
+  });
+
+  const result = await response.json();
+  if (!result.success) {
+    statusDiv.innerText = "❌ Hata oluştu.";
+    button.disabled = false;
+    button.innerHTML = `Transfer Et`;
+    return;
+  }
+
+  statusDiv.innerText = "🔄 İşleniyor...";
+  const pollInterval = setInterval(async () => {
+    const pollRes = await fetch(`/transfer/status/${companyId}/`);
+    const pollData = await pollRes.json();
+
+    if (pollData.status === "pending") return;
+
+    clearInterval(pollInterval);
+    statTotal.innerText = pollData.total_count || 0;
+    statCreated.innerText = pollData.created_count || 0;
+    statUpdated.innerText = pollData.updated_count || 0;
+    statSkipped.innerText = pollData.skipped_count || 0;
+
+    statusDiv.innerText = pollData.success ? "✅ Tamamlandı" : "❌ Hatalı";
+    timeDiv.innerHTML = `Son Transfer : <strong>${new Date().toLocaleString("tr-TR")}</strong>`;
+
+    button.disabled = false;
+    button.innerHTML = `Transfer Et`;
+    button.closest(".custom-card").style.opacity = "1";
+
+    // ✅ Global toplamları güncelle
+    if (pollData.global_totals) {
+      updateGlobalTransferSummary(pollData);  // ayrı fonksiyon olarak çağrılıyor
+    }
+  }, 3000);
+} // 👈 Burası triggerCompanyTransfer fonksiyonunun kapanışıdır
+
+
+
+
+// ✅ Tümünü tetikleme
+document.getElementById("triggerAllTransfers").addEventListener("click", async function () {
+  const dates = getSelectedDates();
+  if (!dates) return;
+
+  const buttons = document.querySelectorAll("button[data-company-id]");
+  for (const btn of buttons) {
+    triggerCompanyTransfer(btn, dates.start_date, dates.end_date);
+  }
+});
+
+</script>
+
+<script>
+function triggerCreditCardTask(company_id) {
+  showGlobalModalPopup(
+    "Bu şirkete ait kart mutabakatı başlatılsın mı?",
+    {
+      type: "warning",
+      title: "Kart Bilgisi Getir",
+      showOk: true,
+      okText: "Evet",
+      showCancel: true,
+      cancelText: "Hayır",
+      onOk: () => {
+        fetch(`/transfer/trigger-card-task/?company_id=${company_id}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === "started") {
+              showGlobalModalPopup(
+                "Kart mutabakatı başladı. Birkaç dakika sonra poliçeleri kontrol edebilirsiniz.",
+                {
+                  type: "info",
+                  title: "Kart Mutabakatı",
+                  showOk: true,
+                  okText: "Tamam"
+                }
+              );
+            } else if (data.status === "not_found") {
+              showGlobalModalPopup("⚠️ Şirket bulunamadı veya tanımlı handler yok.", {
+                type: "warning",
+                showOk: true
+              });
+            } else if (data.status === "service_not_found") {
+              showGlobalModalPopup("⚠️ Bu şirkete ait servis yapılandırması bulunamadı.", {
+                type: "warning",
+                showOk: true
+              });
+            } else {
+              showGlobalModalPopup("❌ Beklenmeyen bir durum oluştu.", {
+                type: "error",
+                showOk: true
+              });
+            }
+          })
+          .catch(error => {
+            console.error("Kart task hatası:", error);
+            showGlobalModalPopup("🚫 Sunucuya bağlanırken hata oluştu.", {
+              type: "error",
+              showOk: true
+            });
+          });
+      }
+    }
+  );
+}
+</script>
+
+
+{% endblock %}
