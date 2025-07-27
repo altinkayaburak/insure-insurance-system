@@ -1,0 +1,30 @@
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+
+# VSCode / PyCharm
+.idea/
+.vscode/
+
+# Ortam dosyaları
+.env
+*.log
+
+# Yerel ayarlar
+INSAI/settings_local.py
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.bak
+
+# Static build (deploy sonrası üretilecek dosyalar)
+staticfiles/
+
+# MacOS / Windows temp
+.DS_Store
+Thumbs.db
+
+# Test / dump dosyaları
+viewstate.txt
+import_customers.py
