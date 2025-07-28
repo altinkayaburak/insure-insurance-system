@@ -599,6 +599,7 @@ class ExternalTramerPolicy(models.Model):
     agency = models.ForeignKey('agency.Agency', on_delete=models.CASCADE, null=True, related_name='external_tramer_policies')
     customer = models.ForeignKey('database.Customer', on_delete=models.SET_NULL, null=True, related_name='external_tramer_policies')
     asset_car = models.ForeignKey('database.AssetCars', on_delete=models.SET_NULL, null=True, related_name='external_tramer_policies')
+    branch = models.ForeignKey("PolicyBranch", on_delete=models.SET_NULL, null=True, blank=True,related_name="external_tramer_policies")
 
     AcentePartajNo = models.CharField(max_length=20, null=True, blank=True)
     PoliceTanzimTarihi = models.DateTimeField(null=True, blank=True)
@@ -622,7 +623,6 @@ class ExternalTramerPolicy(models.Model):
     class Meta:
         db_table = "external_tramer_policy"
         unique_together = ("agency", "PoliceNo", "YenilemeNo", "ZeyilNo")
-
 
 
 class PolicyStatus(models.Model):
@@ -786,6 +786,7 @@ class AssetCars(models.Model):
         'database.Policy', on_delete=models.CASCADE,
         null=True, blank=True, related_name='car_assets'
     )
+
     agency = models.ForeignKey(
         'agency.Agency', on_delete=models.CASCADE,
         related_name='car_assets'

@@ -4,10 +4,11 @@ import ssl
 from decimal import Decimal, InvalidOperation
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.utils.timezone import make_aware
 from requests.adapters import HTTPAdapter
 from django.conf import settings
 from datetime import timedelta
-from datetime import datetime
+import datetime
 from requests.auth import HTTPBasicAuth
 from database.models import Customer, CustomerContact, AssetCars, ExternalTramerPolicy
 import uuid
@@ -133,8 +134,9 @@ def create_or_update_customer_generic(
 def create_or_update_asset_car_generic(agency_id: int, customer_id: int, car_data: dict):
     """
     🚗 AssetCars modeline kayıt/güncelleme işlemi.
-    - agency_id ve customer_id tenant separation sağlar.
-    - AracSasiNo varsa ona göre, yoksa AracPlakaTam üzerinden kontrol yapılır.
+    - agency_id + insured_id + AracSasiNo ile sorgular.
+    - AracSasiNo yoksa AracPlakaTam ile sorgular.
+    - Duplicate insert hatası vermez, varsa günceller.
     """
 
     if not car_data:
@@ -147,42 +149,42 @@ def create_or_update_asset_car_generic(agency_id: int, customer_id: int, car_dat
         print("❌ Şase veya plaka bilgisi yok, araç atlanacak.")
         return None
 
+    # Desteklenen alanları filtrele
     valid_fields = {f.name for f in AssetCars._meta.fields}
     model_fields = {
         k: (parse_date(v) if "tarih" in k.lower() else v)
         for k, v in car_data.items() if k in valid_fields
     }
 
-    model_fields["agency_id"] = agency_id
-    model_fields["customer_id"] = customer_id
-    model_fields["AktifMi"] = True  # ✅ Her zaman aktif kayıt yazılır
+    model_fields.update({
+        "agency_id": agency_id,
+        "insured_id": customer_id,
+        "AktifMi": True
+    })
 
     lookup = {
         "agency_id": agency_id,
-        "customer_id": customer_id,
+        "insured_id": customer_id,
     }
-
     if sasi_no:
         lookup["AracSasiNo"] = sasi_no
     else:
         lookup["AracPlakaTam"] = plaka
 
     try:
-        obj, created = AssetCars.objects.update_or_create(
-            defaults=model_fields,
-            **lookup
-        )
+        obj, created = AssetCars.objects.update_or_create(defaults=model_fields, **lookup)
         print(f"{'🆕' if created else '♻️'} Araç işlendi → ID={obj.id}")
         return obj.id
     except Exception as e:
         print(f"❌ Araç kaydı hatası: {e}")
         return None
 
-def create_external_policy(agency_id, company_id, customer, car, data, branch_id):
+
+
+def create_external_policy(agency_id, company_id, customer, data, branch_id):
     print("📝 [create_external_policy] Başlatıldı")
     records = []
 
-    # Geçmiş ve yürür poliçeleri birleştir
     try:
         gecmis = data["value"]["TramerSonucObjesi_sn040102TrafikPoliceSorguSonucu"].get("gecmisPoliceler", [])
         yurur = data["value"]["TramerSonucObjesi_sn040102TrafikPoliceSorguSonucu"].get("yururPoliceler", [])
@@ -198,29 +200,38 @@ def create_external_policy(agency_id, company_id, customer, car, data, branch_id
             policy_key = row.get("policeAnahtari", {})
             tarih = row.get("tarihBilgileri", {})
             belge = row.get("belgeBilgileri", {})
-            alanlar = row.get("Alanlar", {})
 
-            obj, created = ExternalTramerPolicy.objects.update_or_create(
-                agency_id=agency_id,
-                PoliceNo=policy_key.get("policeNo"),
-                ZeyilNo=row.get("policeEkiNo"),
-                YenilemeNo=policy_key.get("yenilemeNo"),
-                customer=customer,
-                asset_car=car,
-                defaults={
-                    "SigortaSirketiKodu": policy_key.get("sirketKodu"),
-                    "AcentePartajNo": policy_key.get("acenteKod"),
-                    "PoliceBaslangicTarihi": parse_date(tarih.get("baslangicTarihi")),
-                    "PoliceBitisTarihi": parse_date(tarih.get("bitisTarihi")),
-                    "ZeyilBaslangicTarihi": parse_date(tarih.get("ekBaslangicTarihi")),
-                    "ZeyilBitisTarihi": parse_date(tarih.get("ekBitisTarihi")),
-                    "PoliceTanzimTarihi": parse_date(tarih.get("tanzimTarihi")),
-                    "ZeyilTanzimTarihi": parse_date(belge.get("belgeTarih")),
-                    "ZeyilKodu": row.get("policeEkiTuru"),
-                    "AracTrafikKademe": belge.get("uygulanmisTarifeBasamakKodu"),
-                    "branch_id": branch_id,
-                }
-            )
+            zeyil_no = str(row.get("policeEkiNo") or "0")
+            yenileme_no = str(policy_key.get("yenilemeNo") or "0")
+
+            lookup = {
+                "agency_id": agency_id,
+                "PoliceNo": policy_key.get("policeNo"),
+                "ZeyilNo": zeyil_no,
+                "YenilemeNo": yenileme_no,
+            }
+
+            defaults = {
+                "customer": customer,
+                "SigortaSirketiKodu": policy_key.get("sirketKodu"),
+                "AcentePartajNo": policy_key.get("acenteKod"),
+                "PoliceBaslangicTarihi": parse_date(tarih.get("baslangicTarihi")),
+                "PoliceBitisTarihi": parse_date(tarih.get("bitisTarihi")),
+                "ZeyilBaslangicTarihi": parse_date(tarih.get("ekBaslangicTarihi")),
+                "ZeyilBitisTarihi": parse_date(tarih.get("ekBitisTarihi")),
+                "PoliceTanzimTarihi": parse_date(tarih.get("tanzimTarihi")),
+                "ZeyilTanzimTarihi": parse_date(belge.get("belgeTarih")),
+                "ZeyilKodu": row.get("policeEkiTuru"),
+                "AracTrafikKademe": belge.get("uygulanmisTarifeBasamakKodu"),
+                "branch_id": branch_id,
+            }
+
+            obj, created = ExternalTramerPolicy.objects.get_or_create(**lookup, defaults=defaults)
+
+            if not created:
+                for key, val in defaults.items():
+                    setattr(obj, key, val)
+                obj.save()
 
             print(f"{'🆕' if created else '♻️'} ExternalPolicy işlendi: {obj.PoliceNo}")
             records.append(obj)
@@ -230,6 +241,8 @@ def create_external_policy(agency_id, company_id, customer, car, data, branch_id
             continue
 
     return records
+
+
 
 
 def apply_company_field_mapping(response_data, mapping_qs, company_id=None, policy_data=None):
@@ -420,7 +433,6 @@ def apply_company_service_field_mapping(response_data, mapping_qs, extra_fields=
     return mapped_fields
 
 
-
 def save_transfer_phone_if_valid(customer, data: dict):
     print(f"📞 [DEBUG] save_transfer_phone_if_valid → customer: {customer.identity_number}")
 
@@ -521,41 +533,38 @@ def parse_date(val):
 
     val = str(val).strip().replace("\n", "").replace("\r", "")
 
+    def make_dt(dt):
+        try:
+            return make_aware(datetime.datetime.combine(dt, datetime.time.min))
+        except Exception:
+            return datetime.datetime.combine(dt, datetime.time.min)
+
     # ✅ .NET JSON tarih formatı: /Date(1753218000000)/
     if "Date(" in val:
         try:
             timestamp = int(re.search(r"\d+", val).group()) / 1000
-            return datetime.utcfromtimestamp(timestamp).date()
+            return make_aware(datetime.datetime.utcfromtimestamp(timestamp))
         except Exception as e:
             print("❌ .NET tarih parse hatası:", e, "| Girdi:", val)
 
     # ✅ 13 haneli timestamp string (örnek: 1753218000000)
     if val.isdigit() and len(val) == 13:
         try:
-            return datetime.utcfromtimestamp(int(val) / 1000).date()
+            return make_aware(datetime.datetime.utcfromtimestamp(int(val) / 1000))
         except Exception as e:
             print("❌ Timestamp tarih parse hatası:", e, "| Girdi:", val)
 
     try:
-        # Türk tipi: 24.07.2025
         if re.match(r"\d{2}\.\d{2}\.\d{4}", val):
-            return datetime.strptime(val, "%d.%m.%Y").date()
-
-        # ISO tipi: 2025-07-24
+            return make_dt(datetime.datetime.strptime(val, "%d.%m.%Y").date())
         elif re.match(r"\d{4}-\d{2}-\d{2}", val):
-            return datetime.strptime(val[:10], "%Y-%m-%d").date()
-
-        # Slash tipi: 24/07/2025
+            return make_dt(datetime.datetime.strptime(val[:10], "%Y-%m-%d").date())
         elif re.match(r"\d{2}/\d{2}/\d{4}", val):
-            return datetime.strptime(val, "%d/%m/%Y").date()
-
-        # ISO full datetime: 2025-07-24T15:30:00
+            return make_dt(datetime.datetime.strptime(val, "%d/%m/%Y").date())
         elif re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", val):
-            return datetime.strptime(val[:10], "%Y-%m-%d").date()
-
-        # YYYMMDD tipi: 20250724
+            return make_dt(datetime.datetime.strptime(val[:10], "%Y-%m-%d").date())
         elif re.match(r"\d{8}", val):
-            return datetime.strptime(val, "%Y%m%d").date()
+            return make_dt(datetime.datetime.strptime(val, "%Y%m%d").date())
 
     except Exception as e:
         print("❌ parse_date hatası:", e, "| Girdi:", val)

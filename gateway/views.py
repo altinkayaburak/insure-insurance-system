@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from requests import Session
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -7,12 +7,13 @@ from django.contrib.auth.decorators import login_required
 import xml.etree.ElementTree as ET
 from django.db import models
 from urllib3 import Retry
+from typing import Any
 
 from INSAI.utils import parse_date_from_string, SSLAdapter, clean_namespaces, get_by_path, \
     apply_company_service_field_mapping, create_or_update_customer_generic, create_or_update_asset_car_generic, \
     parse_date
 from database.models import City, ServiceConfiguration, Customer, CompanyServiceFieldMapping, \
-    InsuranceCompany, AssetCars, ExternalTramerPolicy
+    InsuranceCompany, AssetCars, ExternalTramerPolicy, PolicyBranch
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from gateway.models import ProposalServiceLog, UavtDetails
@@ -2455,87 +2456,83 @@ def run_and_process_tramer_policies(request, form_data, agency_id):
 
 
 
-def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict:
-    print("\n🚧 Tramer response verisi isleniyor (regex tabanlı)")
+def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict[str, Any]:
+    print("\n🚧 Tramer response verisi işleniyor (JSON fix ile)")
+
     result = {
         "customers_created": 0,
         "cars_created": 0,
         "policies_created": 0,
-        "errors": []
+        "errors": [],
+        "latest_policy": None
     }
 
     try:
-        # 1. Gecmis ve yurur poliçeleri ayrı ayrı yakala
-        gecmis_match = re.search(r'"gecmisPoliceler":\[(.*?)\]\s*,\s*"policeninHasarlari"', raw_text, re.DOTALL)
-        yurur_match = re.search(r'"yururPoliceler":\[(.*?)\](\s*,|\s*})', raw_text, re.DOTALL)
+        cleaned = raw_text.replace('new Ajax.Web.Dictionary("AdaGenel.Cesitli.NesneAlanlari",', '')
+        cleaned = cleaned.replace(')', '')
+        try:
+            parsed = json.loads(cleaned)
+        except Exception as e:
+            print(f"❌ JSON parse hatası: {e}")
+            result["errors"].append("JSON parse edilemedi")
+            return result
 
-        gecmis_blocks = re.findall(r'\{.*?\}', gecmis_match.group(1), re.DOTALL) if gecmis_match else []
-        yurur_blocks = re.findall(r'\{.*?\}', yurur_match.group(1), re.DOTALL) if yurur_match else []
+        tramer_obj = parsed.get("value", {}).get("TramerSonucObjesi_sn040102TrafikPoliceSorguSonucu") or \
+                     parsed.get("value", {}).get("TramerSonucObjesi_sn040101TrafikPoliceSorguSonucu")
 
+        if not tramer_obj:
+            result["errors"].append("TramerSonucObjesi eksik")
+            return result
+
+        gecmis_blocks = tramer_obj.get("gecmisPoliceler", [])
+        yurur_blocks = tramer_obj.get("yururPoliceler", [])
         all_blocks = gecmis_blocks + yurur_blocks
         print(f"📆 Toplam poliçe sayısı (geçmiş+yürür): {len(all_blocks)}")
 
-        # ✅ Sigortalı bilgileri tek tek taranacak
-        sigortali_matches = re.findall(r'"sigortali"\s*:\s*\{(.*?)\}', raw_text, re.DOTALL)
+        branch_obj = PolicyBranch.objects.filter(code=100).first()
 
-        for sig_block in sigortali_matches:
+        for block in all_blocks:
             try:
-                identity_match = re.search(r'"tckimlikNo"\s*:\s*"(\d{11})"', sig_block)
-                ad_match = re.search(r'"adUnvan"\s*:\s*"([^"]+)"', sig_block)
-                soyad_match = re.search(r'"soyad"\s*:\s*"([^"]+)"', sig_block)
-
-                identity_number = identity_match.group(1) if identity_match else None
-                full_name = f"{ad_match.group(1)} {soyad_match.group(1)}" if ad_match and soyad_match else None
+                sigortali = block.get("sigortali", {})
+                identity_number = sigortali.get("tckimlikNo")
+                full_name = f"{sigortali.get('adUnvan', '')} {sigortali.get('soyad', '')}".strip()
 
                 if not identity_number or not full_name:
-                    print(f"❌ Kimlik veya isim eksik, atlandı\n🔍 Sigortalı blok: {sig_block[:200]}")
+                    print("❌ Kimlik veya isim eksik, atlandı")
                     continue
 
                 customer_list = [{"SigortaliKimlikNo": identity_number, "full_name": full_name}]
                 created_ids = create_or_update_customer_generic(agency_id, customer_list)
                 if not created_ids:
-                    print("❌ Müşteri oluşturulamadı, geçildi.")
+                    print("❌ Müşteri oluşturulamadı")
                     continue
 
                 customer = Customer.objects.filter(identity_number=identity_number, agency_id=agency_id).first()
                 if not customer:
-                    print("❌ Müşteri bulunamadı (DB)")
                     continue
-
                 result["customers_created"] += 1
 
-            except Exception as ex:
-                print(f"❌ Sigortalı işleme hatası: {ex}")
-                result["errors"].append(str(ex))
+                arac = block.get("aracTemelBilgileri", {})
+                marka = arac.get("marka", {})
+                tip = arac.get("tip", {})
+                plaka = arac.get("plaka", {})
 
-        # Poliçe blokları ayrı ayrı işlenecek
-        for block in all_blocks:
-            try:
-                # 🔹 Araç bilgileri
-                car_data = {}
-                for key, field in [
-                    (r'"aciklama":"([^"]+)"', "AracMarkaAdi"),
-                    (r'"kod":"(\d+)"', "AracTipKodu"),
-                    (r'"modelYili":(\d+)', "AracModelYili"),
-                    (r'"motorNo":"([^"]*)"', "AracMotorNo"),
-                    (r'"sasiNo":"([^"]*)"', "AracSasiNo"),
-                    (r'"ilKodu":"(\d+)"', "AracPlakailKodu"),
-                    (r'"no":"([^"]+)"', "AracPlakaNo"),
-                    (r'"uygulanmisTarifeBasamakKodu":(\d+)', "AracTrafikKademe"),
-                    (r'"tescilTarihi":"\\/Date\((\d+)', "AracTescilTarihi")
-                ]:
-                    match = re.search(key, block)
-                    if match:
-                        val = match.group(1)
-                        car_data[field] = parse_date(int(val)) if "Tarih" in field else val
+                car_data = {
+                    "AracMarkaAdi": marka.get("aciklama"),
+                    "AracMarkaKodu": marka.get("kod"),
+                    "AracTipAdi": tip.get("aciklama"),
+                    "AracTipKodu": tip.get("kod"),
+                    "AracModelYili": arac.get("modelYili"),
+                    "AracMotorNo": arac.get("motorNo"),
+                    "AracSasiNo": arac.get("sasiNo"),
+                    "AracPlakailKodu": plaka.get("ilKodu"),
+                    "AracPlakaNo": plaka.get("no"),
+                    "AracTrafikKademe": block.get("belgeBilgileri", {}).get("uygulanmisTarifeBasamakKodu"),
+                    "AracTescilTarihi": parse_date(arac.get("tescilTarihi")),
+                }
 
-                plaka = car_data.get("AracPlakaNo", "")
-                if plaka:
-                    car_data["AracPlakaTam"] = f"{car_data.get('AracPlakailKodu', '')} {plaka}"
-
-                customer = Customer.objects.filter(agency_id=agency_id, identity_number=car_data.get("AracPlakaNo")).first()
-                if not customer:
-                    continue
+                if plaka.get("no"):
+                    car_data["AracPlakaTam"] = f"{plaka.get('ilKodu', '')} {plaka.get('no')}"
 
                 car_id = create_or_update_asset_car_generic(agency_id, customer.id, car_data)
                 if not car_id:
@@ -2545,44 +2542,101 @@ def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict:
                 car = AssetCars.objects.get(id=car_id)
                 result["cars_created"] += 1
 
-                # 🔹 Poliçe bilgileri
-                police_no = re.search(r'"policeNo":"(\d+)"', block)
-                zeyil = re.search(r'"policeEkiNo":"?(\d+)"?', block)
-                yenileme = re.search(r'"yenilemeNo":"?(\d+)"?', block)
-                acente = re.search(r'"acenteKod":"(\d+)"', block)
-                sirket = re.search(r'"sirketKodu":"(\d+)"', block)
+                police = block.get("policeAnahtari", {})
+                tarih = block.get("tarihBilgileri", {})
 
-                tarih_matches = {
-                    "PoliceTanzimTarihi": r'"tanzimTarihi":"\\/Date\((\d+)\)',
-                    "PoliceBaslangicTarihi": r'"baslangicTarihi":"\\/Date\((\d+)\)',
-                    "PoliceBitisTarihi": r'"bitisTarihi":"\\/Date\((\d+)\)',
-                    "ZeyilBaslangicTarihi": r'"ekBaslangicTarihi":"\\/Date\((\d+)\)',
-                    "ZeyilBitisTarihi": r'"ekBitisTarihi":"\\/Date\((\d+)\)',
-                    "ZeyilTanzimTarihi": r'"belgeTarih":"([0-9.]+)"'
+                lookup = {
+                    "agency_id": agency_id,
+                    "PoliceNo": police.get("policeNo"),
+                    "ZeyilNo": str(block.get("policeEkiNo") or "0"),
+                    "YenilemeNo": str(police.get("yenilemeNo") or "0"),
                 }
 
-                policy_data = {
-                    "agency_id": agency_id,
+                defaults = {
                     "customer": customer,
                     "asset_car": car,
-                    "PoliceNo": police_no.group(1) if police_no else None,
-                    "ZeyilNo": zeyil.group(1) if zeyil else None,
-                    "YenilemeNo": yenileme.group(1) if yenileme else None,
-                    "AcentePartajNo": acente.group(1) if acente else None,
-                    "SigortaSirketiKodu": sirket.group(1) if sirket else None,
+                    "branch": branch_obj,
+                    "SigortaSirketiKodu": police.get("sirketKodu"),
+                    "AcentePartajNo": police.get("acenteKod"),
+                    "PoliceTanzimTarihi": parse_date(tarih.get("tanzimTarihi")),
+                    "PoliceBaslangicTarihi": parse_date(tarih.get("baslangicTarihi")),
+                    "PoliceBitisTarihi": parse_date(tarih.get("bitisTarihi")),
+                    "ZeyilBaslangicTarihi": parse_date(tarih.get("ekBaslangicTarihi")),
+                    "ZeyilBitisTarihi": parse_date(tarih.get("ekBitisTarihi")),
+                    "ZeyilTanzimTarihi": parse_date(block.get("belgeTarih")),
                 }
 
-                for field, regex in tarih_matches.items():
-                    match = re.search(regex, block)
-                    if match:
-                        policy_data[field] = parse_date(match.group(1))
+                obj, created = ExternalTramerPolicy.objects.get_or_create(**lookup, defaults=defaults)
+                if not created:
+                    for key, val in defaults.items():
+                        setattr(obj, key, val)
+                    obj.save()
 
-                ExternalTramerPolicy.objects.create(**policy_data)
-                print(f"✅ Poliçe kaydedildi → {policy_data['PoliceNo']}")
+                print(f"{'🆕' if created else '♻️'} Poliçe işlendi → {lookup['PoliceNo']}")
+                print(f"✅ Poliçe kaydedildi → {lookup['PoliceNo']}")
                 result["policies_created"] += 1
 
             except Exception as ex:
                 print(f"❌ Blok işleme hatası: {ex}")
+                result["errors"].append(str(ex))
+
+        alanlar_raw = parsed.get("value", {}).get("Alanlar", [])
+        alan_dict = {item[0]: item[1].get("Cevap") for item in alanlar_raw} if alanlar_raw else {}
+
+        if alan_dict and alan_dict.get("OncekiPoliceNo"):
+            try:
+                # Poliçeyi bul ve bazı alanlarını güncelle (DB'ye yazılacak olanlar)
+                update_lookup = {
+                    "agency_id": agency_id,
+                    "PoliceNo": alan_dict.get("OncekiPoliceNo"),
+                    "ZeyilNo": str(alan_dict.get("OncekiZeyilNo") or "0"),
+                    "YenilemeNo": str(alan_dict.get("OncekiYenilemeNo") or "0"),
+                }
+                last_policy = ExternalTramerPolicy.objects.filter(**update_lookup).first()
+
+                if last_policy:
+                    last_policy.AcentePartajNo = alan_dict.get("OncekiAcenteNo") or last_policy.AcentePartajNo
+                    last_policy.SigortaSirketiKodu = alan_dict.get("OncekiSirketKodu") or last_policy.SigortaSirketiKodu
+                    last_policy.ZeyilNo = "0"
+                    if last_policy.PoliceBitisTarihi:
+                        last_policy.PoliceBaslangicTarihi = last_policy.PoliceBitisTarihi - timedelta(days=365)
+                    last_policy.save()
+
+                # 🧾 Kullanıcıya gösterilecek ekstra alanlar (sadece UI için)
+                result["latest_policy"] = {
+                    # Araç bilgileri (car_data’dan)
+                    "AracMarkaAdi": car_data.get("AracMarkaAdi"),
+                    "AracMarkaKodu": car_data.get("AracMarkaKodu"),
+                    "AracTipAdi": car_data.get("AracTipAdi"),
+                    "AracTipKodu": car_data.get("AracTipKodu"),
+                    "AracModelYili": car_data.get("AracModelYili"),
+                    "AracMotorNo": car_data.get("AracMotorNo"),
+                    "AracSasiNo": car_data.get("AracSasiNo"),
+                    "AracPlakailKodu": car_data.get("AracPlakailKodu"),
+                    "AracPlakaNo": car_data.get("AracPlakaNo"),
+                    "AracTrafikKademe": car_data.get("AracTrafikKademe"),
+                    "AracTescilTarihi": car_data.get("AracTescilTarihi"),
+                    "AracPlakaTam": car_data.get("AracPlakaTam"),
+
+                    # Alanlar'dan gelen bilgiler
+                    "OncekiPoliceNo": alan_dict.get("OncekiPoliceNo"),
+                    "OncekiZeyilNo": alan_dict.get("OncekiZeyilNo"),
+                    "OncekiYenilemeNo": alan_dict.get("OncekiYenilemeNo"),
+                    "OncekiAcenteNo": alan_dict.get("OncekiAcenteNo"),
+                    "OncekiSirketKodu": alan_dict.get("OncekiSirketKodu"),
+                    "PoliceBitisTarihi": last_policy.PoliceBitisTarihi.strftime(
+                        "%Y-%m-%d") if last_policy and last_policy.PoliceBitisTarihi else None,
+                    "PoliceBaslangicTarihi": last_policy.PoliceBaslangicTarihi.strftime(
+                        "%Y-%m-%d") if last_policy and last_policy.PoliceBaslangicTarihi else None,
+                    "AracTarz": alan_dict.get("AracTarz"),
+                }
+
+                print("📦 Kullanıcıya gösterilecek latest_policy içeriği:")
+                for k, v in result["latest_policy"].items():
+                    print(f"  {k}: {v}")
+
+            except Exception as ex:
+                print(f"❌ Alanlar güncelleme hatası: {ex}")
                 result["errors"].append(str(ex))
 
     except Exception as ex:
@@ -2590,8 +2644,6 @@ def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict:
         result["errors"].append(str(ex))
 
     return result
-
-
 
 
 

@@ -93,7 +93,7 @@ hostname = socket.gethostname()
 
 # 🔍 IP tabanlı ayrım: Docker veya ortamdan bağımsız çalışsın
 if os.environ.get("DOCKERIZED") == "true":
-    db_host = "192.168.1.101"  # Şirkette konteynerden bağlanırken bu IP
+    db_host = "172.200.10.18"  # Şirkette konteynerden bağlanırken bu IP
 else:
     db_host = "localhost\\SQLEXPRESS01"  # Lokal ortamda SQL Server instance adı
 
