@@ -11,7 +11,7 @@ from typing import Any
 
 from INSAI.utils import parse_date_from_string, SSLAdapter, clean_namespaces, get_by_path, \
     apply_company_service_field_mapping, create_or_update_customer_generic, create_or_update_asset_car_generic, \
-    parse_date
+    parse_date, create_external_policy
 from database.models import City, ServiceConfiguration, Customer, CompanyServiceFieldMapping, \
     InsuranceCompany, AssetCars, ExternalTramerPolicy, PolicyBranch
 from django.views.decorators.csrf import csrf_exempt
@@ -2371,10 +2371,31 @@ def get_tescil_detay(agency_id, plaka_il_kodu, plaka, kimlik_no, service_id=80):
         return {"success": False, "error": str(e)}
 
 
-def run_and_process_tramer_policies(request, form_data, agency_id):
-    print(f"\n🚦 Tramer trafik servisi başlatıldı | agency_id={agency_id}")
-    service_id = 87
+def run_and_process_tramer_policies(request, form_data: dict, agency_id: int, service_id: int, save_fn: callable):
+    print(f"\n🚦 Tramer servisi başlatıldı | agency_id={agency_id} | service_id={service_id}")
 
+    # 👤 Kimlik kontrolü ve ayrıştırma
+    kimlik_no = form_data.get("SigortaliKimlikNo") or form_data.get("SigortaliVergiKimlikNo", "")
+    tc_kimlik_no = kimlik_no if len(kimlik_no) == 11 else ""
+    vergi_no = kimlik_no if len(kimlik_no) == 10 else ""
+
+    if not tc_kimlik_no and not vergi_no:
+        return {"success": False, "error": "TC Kimlik No veya Vergi No geçerli değil."}
+
+    # 🚗 Plaka kontrolü
+    plaka_raw = form_data.get("AracPlakaTam", "").replace(" ", "")
+    if len(plaka_raw) < 4:
+        return {"success": False, "error": "Geçersiz plaka formatı."}
+
+    # 📄 Template context (ortak yapı)
+    context = {
+        "AracPlakaTam": plaka_raw,
+        "SigortaliKimlikNo": tc_kimlik_no,
+        "SigortaliVergiKimlikNo": vergi_no,
+        "TescilBelgeSeriNo": form_data.get("TescilBelgeSeriNo", ""),
+    }
+
+    # 🛡️ Yetki kontrolü
     if not AgencyServiceAuthorization.objects.filter(
         agency_id=agency_id,
         service_id=service_id,
@@ -2386,36 +2407,24 @@ def run_and_process_tramer_policies(request, form_data, agency_id):
     try:
         service = ServiceConfiguration.objects.get(id=service_id)
     except ServiceConfiguration.DoesNotExist:
-        print("❌ Servis yapılandırması bulunamadı")
-        return {"success": False, "error": "Servis yapılandırması eksik."}
+        return {"success": False, "error": "Servis yapılandırması bulunamadı."}
 
     password_info = AgencyPasswords.objects.filter(
         agency_id=agency_id,
-        insurance_company_id=service.insurance_company_id
+        insurance_company=service.insurance_company
     ).first()
 
     if not password_info or not password_info.cookie:
-        print("❌ Cookie bilgisi bulunamadı")
-        return {"success": False, "error": "Servis kullanıcı bilgileri eksik."}
+        return {"success": False, "error": "Cookie veya kullanıcı bilgisi eksik."}
 
-    plaka_raw = form_data.get("AracPlakaTam", "").replace(" ", "")
-    if len(plaka_raw) < 4:
-        return {"success": False, "error": "Geçersiz plaka formatı"}
-
-    kimlik_no = form_data.get("SigortaliKimlikNo", "")
-    vergi_no = form_data.get("SigortaliVergiKimlikNo", "")
-
+    # 🧩 Template render
     try:
-        rendered_body = Template(service.request_template).render(
-            AracPlakaTam=plaka_raw,
-            SigortaliKimlikNo=kimlik_no,
-            SigortaliVergiKimlikNo=vergi_no
-        )
+        rendered_body = Template(service.request_template).render(**context)
         print("📤 Request Body:\n", rendered_body)
     except Exception as e:
-        print("❌ Template render hatası:", e)
-        return {"success": False, "error": "Şablon oluşturulamadı."}
+        return {"success": False, "error": f"Şablon oluşturulamadı: {e}"}
 
+    # 📤 İstek gönder
     headers = {
         "Content-Type": service.content_type,
         "Cookie": password_info.cookie.strip()
@@ -2438,23 +2447,112 @@ def run_and_process_tramer_policies(request, form_data, agency_id):
         if response.status_code != 200:
             return {"success": False, "error": f"Yanıt kodu: {response.status_code}"}
     except Exception as e:
-        print("❌ Servis isteği hatası:", e)
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"İstek hatası: {e}"}
 
+    # 🧾 Kayıt işlemi
     try:
         raw_text = response.text
-        print("📦 İlk 500 karakter:", raw_text[:500])
+        print("📦 İlk 500 karakter:\n", raw_text[:500])
 
-        # ✅ JSON parse denemesi yapılmıyor
-        # Doğrudan metin üzerinden regex ile `gecmisPoliceler` listesi işlenecek
-        result = create_and_save_tramer_data(agency_id, raw_text)
-        print("✅ Kayıt işlemi tamamlandı.")
-        return {"success": True, "result": result}
+        # İsteğe bağlı: tüm cevabı dosyaya yaz
+        with open("last_tramer_response.txt", "w", encoding="utf-8") as f:
+            f.write(raw_text)
+
+        if getattr(save_fn, "expects_json", False):
+            try:
+                parsed = json.loads(raw_text)
+            except Exception as e:
+                print("❌ JSON parse hatası:", e)
+                return {"success": False, "error": "Servis yanıtı geçersiz JSON formatında."}
+            return save_fn(agency_id, parsed)
+        else:
+            return save_fn(agency_id, raw_text)
+
     except Exception as e:
-        print("❌ Kayıt işlemi patladı:", e)
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"Kayıt hatası: {e}"}
 
 
+
+def create_and_save_kasko_tramer_data(agency_id: int, response_data: dict):
+    print("🚦 [KASKO TRAMER] create_and_save_kasko_tramer_data başladı")
+
+    if "error" in response_data:
+        print("❌ Servis error yanıtı:", response_data["error"].get("Message", "Bilinmeyen hata"))
+        return
+
+    branch_obj = PolicyBranch.objects.filter(code=101).first()
+    if not branch_obj:
+        print("❌ PolicyBranch bulunamadı (code=101)")
+        return
+
+    try:
+        main_block = response_data["value"]
+        all_policies = main_block.get("DigerPoliceler", [])
+    except Exception as e:
+        print(f"❌ JSON parse hatası: {e}")
+        return
+
+    if not all_policies:
+        print("⚠️ DigerPoliceler boş, kayıt yapılmadı.")
+        return
+
+    # ✅ Her bir poliçeyi sırayla işle
+    for i, item in enumerate(all_policies, start=1):
+        hesaplama_list = item.get("HesaplamaLoglari", [])
+        if not hesaplama_list:
+            print(f"⚠️ DigerPoliceler[{i}] → HesaplamaLoglari boş, atlanıyor.")
+            continue
+
+        row = hesaplama_list[0]
+        customer_dict = {
+            "SigortaliKimlikNo": row.get("SigortaliTCKimlikNo"),
+            "SigortaliVergiKimlikNo": row.get("SigortaliVergiNo"),
+            "SigortaliAdi": row.get("SigortaliAdi"),
+            "SigortaliSoyadi": row.get("SigortaliSoyadi"),
+        }
+        customer_ids = create_or_update_customer_generic(agency_id, [customer_dict])
+        if not customer_ids:
+            print("❌ Müşteri oluşturulamadı")
+            continue
+
+        identity_number = customer_ids[0]
+        customer = Customer.objects.filter(agency_id=agency_id, identity_number=identity_number).first()
+        if not customer:
+            print("❌ Customer nesnesi bulunamadı")
+            continue
+
+        car_dict = {
+            "AracPlakailKodu": row.get("PlakaIlKodu"),
+            "AracPlakaNo": row.get("PlakaKodu"),
+            "AracPlakaTam": f"{row.get('PlakaIlKodu', '')}{row.get('PlakaKodu', '')}",
+            "AracKullanimTarzi": row.get("AracTarifeGrupKodu"),
+            "AracMarkaKodu": row.get("AracMarkaKodu"),
+            "AracBirlikKodu": row.get("AracKodu"),
+            "AracTipKodu": row.get("AracTipKodu"),
+            "AracMarkaAdi": row.get("Marka"),
+            "AracTipAdi": row.get("Tipi"),
+            "AracModelYili": row.get("ModelYili"),
+            "AracMotorNo": row.get("MotorNo"),
+            "AracSasiNo": row.get("SasiNo"),
+        }
+        create_or_update_asset_car_generic(agency_id, customer.id, car_dict)
+
+        create_external_policy(
+            agency_id=agency_id,
+            company_id=None,
+            customer=customer,
+            data={"value": row},
+            branch_id=branch_obj.id,
+        )
+
+        print(f"✅ [{i}] poliçe kaydedildi")
+
+    print("✅ Kasko Tramer kayıt işlemi tamamlandı")
+
+
+
+
+create_and_save_kasko_tramer_data.expects_json = True
 
 def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict[str, Any]:
     print("\n🚧 Tramer response verisi işleniyor (JSON fix ile)")

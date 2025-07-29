@@ -601,6 +601,7 @@ class ExternalTramerPolicy(models.Model):
     asset_car = models.ForeignKey('database.AssetCars', on_delete=models.SET_NULL, null=True, related_name='external_tramer_policies')
     branch = models.ForeignKey("PolicyBranch", on_delete=models.SET_NULL, null=True, blank=True,related_name="external_tramer_policies")
 
+    IptalMi = models.BooleanField(default=False)
     AcentePartajNo = models.CharField(max_length=20, null=True, blank=True)
     PoliceTanzimTarihi = models.DateTimeField(null=True, blank=True)
     PoliceBaslangicTarihi = models.DateTimeField(null=True, blank=True)
