@@ -7,4 +7,3 @@ echo "🚀 Django Celery Worker başlatılıyor..."
 
 # Komutu çalıştır
 exec "$@"
-

@@ -86,7 +86,7 @@ services:
       - MSSQL_PID=Express              # Express sürümü
       - SA_PASSWORD=Passw0rd  # Gerekli: En az 8 karakter, karmaşık olmalı
     ports:
-      - "1433:1433"
+      - "1453:1433"
     volumes:
       - C:\Users\Burak.Altinkaya\OneDrive - ARMOR KATILIM SİGORTA VE REASURANS BROKERLİĞİ ANON\Masaüstü\mssql_data/data:/var/opt/mssql/data
       - C:\Users\Burak.Altinkaya\OneDrive - ARMOR KATILIM SİGORTA VE REASURANS BROKERLİĞİ ANON\Masaüstü\mssql_data/log:/var/opt/mssql/log

@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     build-essential gcc \
     freetds-dev libpq-dev libssl-dev libffi-dev \
     libxml2-dev libxslt1-dev zlib1g-dev \
-    unixodbc unixodbc-dev libodbc1 odbcinst \
+    unixodbc unixodbc-dev libodbc1 odbcinst  dos2unix \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -28,10 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Playwright gerekiyorsa (browser için)
 RUN pip install playwright && playwright install --with-deps chromium || true
 
-COPY . /app/
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN dos2unix /entrypoint.sh && chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 
