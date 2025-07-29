@@ -93,7 +93,7 @@ hostname = socket.gethostname()
 
 # 🔍 IP tabanlı ayrım: Docker veya ortamdan bağımsız çalışsın
 if os.environ.get("DOCKERIZED") == "true":
-    db_host = "172.200.10.18"  # Şirkette konteynerden bağlanırken bu IP
+    db_host = "db"  # Şirkette konteynerden bağlanırken bu IP
 else:
     db_host = "localhost\\SQLEXPRESS01"  # Lokal ortamda SQL Server instance adı
 
@@ -226,8 +226,3 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-# Local ayar dosyası eklensin (şifre, bağlantı vs.)
-try:
-    from .settings_local import *
-except ImportError:
-    pass
