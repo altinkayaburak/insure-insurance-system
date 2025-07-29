@@ -20,8 +20,9 @@ import json
 from django.template.loader import render_to_string
 from django.db.models import Q, OuterRef, Subquery, F, Value, Sum
 import xml.dom.minidom
-
-
+from database.models import CookieLog
+from cookie.tasks import update_all_cookies_for_agency
+from django.shortcuts import render, redirect
 
 
 def get_page_range(current_page, total_pages, delta=2):
@@ -1945,4 +1946,15 @@ def get_company_revision_options(request):
 
     return JsonResponse({"data": result})
 
+#----------------------------------------------------------
 
+@login_required
+def cookie_log_view(request):
+    agency_id = request.user.agency_id
+
+    if request.method == "POST":
+        update_all_cookies_for_agency.delay(agency_id, source="manual")
+        return redirect("cookie_logs")
+
+    logs = CookieLog.objects.filter(agency_id=agency_id).select_related("company")[:100]
+    return render(request, "database/cookie.html", {"logs": logs})

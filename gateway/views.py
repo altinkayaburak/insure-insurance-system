@@ -2549,9 +2549,6 @@ def create_and_save_kasko_tramer_data(agency_id: int, response_data: dict):
 
     print("✅ Kasko Tramer kayıt işlemi tamamlandı")
 
-
-
-
 create_and_save_kasko_tramer_data.expects_json = True
 
 def create_and_save_tramer_data(agency_id: int, raw_text: str) -> dict[str, Any]:

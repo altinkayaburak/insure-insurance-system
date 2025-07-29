@@ -78,6 +78,7 @@ urlpatterns = [
     path("get-customer-assets/", views.customer_assets_view, name="get_customer_assets"),
     path("customer/<int:customer_id>/assets/", views.customer_assets_view, name="customer_assets"),
 
-    path("api/revision-options/", views.get_company_revision_options, name="get_company_revision_options")
+    path("api/revision-options/", views.get_company_revision_options, name="get_company_revision_options"),
+    path("cookie/", views.cookie_log_view, name="cookie_logs"),
 
 ]

@@ -125,8 +125,6 @@ class TransferPostProcessLog(models.Model):
         verbose_name = "Transfer Sonrası İşlem Logu"
         verbose_name_plural = "Transfer Sonrası İşlem Logları"
 
-
-
 class CurrencyMapping(models.Model):
     id = models.AutoField(primary_key=True)
 

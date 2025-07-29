@@ -1020,6 +1020,21 @@ class CompanyServiceFieldMapping(models.Model):
             'company', 'service', 'company_key', 'company_parameter', 'company_parameter_value', 'key', 'parameter'
         )
 
+# agency/models.py
+class CookieLog(models.Model):
+    agency = models.ForeignKey("agency.Agency", on_delete=models.CASCADE)
+    company = models.ForeignKey("database.InsuranceCompany", on_delete=models.CASCADE)
+    username = models.CharField(max_length=100)
+    status = models.CharField(max_length=10, choices=[("success", "Başarılı"), ("fail", "Hatalı")])
+    message = models.TextField(null=True, blank=True)
+    source = models.CharField(max_length=20, choices=[("auto", "Zamanlı"), ("manual", "Elle")], default="auto")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "cookie_log"
+        verbose_name = "Cookie Log"
+        verbose_name_plural = "Cookie Logları"
+        ordering = ['-created_at']
 
 
 

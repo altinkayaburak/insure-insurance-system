@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+  body {
+    background-color: #f8f9fa;
+  }
+
+  .cookie-wrapper {
+    margin: 90px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.04);
+    max-width: 1400px;
+  }
+
+  .cookie-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .cookie-header h4 {
+    font-weight: bold;
+    color: #291f69;
+  }
+
+  .cookie-header button {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+    border-radius: 6px;
+    background-color: #291f69;
+    color: white;
+    border: none;
+  }
+
+  .cookie-header button:hover {
+    background-color: #3c2d89;
+  }
+
+  table td, table th {
+    font-size: 13px;
+    vertical-align: middle !important;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge-success {
+    background-color: #28a745;
+  }
+
+  .badge-danger {
+    background-color: #dc3545;
+  }
+
+  .badge-info {
+    background-color: #17a2b8;
+  }
+
+  .badge-secondary {
+    background-color: #6c757d;
+  }
+</style>
+
+<div class="container cookie-wrapper">
+  <div class="cookie-header">
+    <h4>Cookie Kayıtları</h4>
+    <form method="post" action="{% url 'cookie_logs' %}">
+      {% csrf_token %}
+      <button type="submit">Cookie Al</button>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-sm table-hover align-middle">
+     <thead class="table-light">
+        <tr>
+          <th>Tarih</th>
+          <th>Acente</th>
+          <th>Şirket</th>
+          <th>Kullanıcı</th>
+          <th>Durum</th>
+          <th>Kaynak</th>  <!-- önce kaynak -->
+          <th>Mesaj</th>   <!-- en sağda mesaj -->
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ log.agency.name }}</td>
+          <td>{{ log.company.name }}</td>
+          <td>{{ log.username }}</td>
+          <td>
+            {% if log.status == 'success' %}
+              <span class="badge badge-success">Başarılı</span>
+            {% else %}
+              <span class="badge badge-danger">Hatalı</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if log.source == 'manual' %}
+              <span class="badge badge-info">Elle</span>
+            {% else %}
+              <span class="badge badge-secondary">Zamanlı</span>
+            {% endif %}
+          </td>
+          <td>{{ log.message }}</td>  <!-- mesaj en sağda -->
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">Kayıt bulunamadı.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+</div>
+{% endblock %}
