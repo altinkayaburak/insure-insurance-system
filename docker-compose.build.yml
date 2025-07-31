@@ -1,0 +1,94 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+    container_name: web
+    command: [ "python","manage.py", "runserver",  "0.0.0.0:8001" ]
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - DB_HOST=db
+      - DB_USER=insai_worker
+      - DB_PASSWORD=Insai2025secure
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+    ports:
+      - "8001:8001"
+
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+  #
+  #flower:
+  #  image: mher/flower
+  #  container_name: flower
+  #  ports:
+  #    - "5555:5555"
+  #  depends_on:
+  #    - web
+  #    - redis
+
+  celery_worker:
+    build:
+      context: .
+    container_name: celery_worker
+    command: celery -A INSAI worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+
+  celerybeat:
+    build:
+      context: .
+    container_name: celerybeat
+    command: celery -A INSAI beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+
+  celery_cookie_worker:   # 👈 YENİ SERVİS!
+    build:
+      context: .
+    container_name: celery_cookie_worker
+    command: celery -A INSAI worker --loglevel=info -Q cookie
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+      - redis
+    environment:
+      - DOCKERIZED=true
+      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+
+  db:
+    container_name: db
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Express              # Express sürümü
+      - SA_PASSWORD=Passw0rd  # Gerekli: En az 8 karakter, karmaşık olmalı
+    ports:
+      - "1453:1433"
+    volumes:
+      - ./mssql_data/data:/var/opt/mssql/data
+      - ./mssql_data/log:/var/opt/mssql/log
+      - ./mssql_data/secrets:/var/opt/mssql/secrets
+      - ./bak_files:/bak_files
