@@ -9,7 +9,7 @@ from django.db import models
 from urllib3 import Retry
 from typing import Any
 
-from INSAI.utils import parse_date_from_string, SSLAdapter, clean_namespaces, get_by_path, \
+from INSAI.utils import SSLAdapter, clean_namespaces, get_by_path, \
     apply_company_service_field_mapping, create_or_update_customer_generic, create_or_update_asset_car_generic, \
     parse_date, create_external_policy
 from database.models import City, ServiceConfiguration, Customer, CompanyServiceFieldMapping, \
@@ -23,7 +23,8 @@ from jinja2 import Template
 from requests.adapters import HTTPAdapter
 from offer.core import parse_service_response
 from offer.models import DaskMapping, CustomerCompany
-
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -755,6 +756,7 @@ def update_uavt_details_extra_fields(request):
 
     return JsonResponse({"error": "Sadece POST desteklenir"}, status=405)
 
+
 def get_first_available_birth_date(identity_number, agency_id, update_customer=True):
     """
     Tüm doğum tarihi servislerini sırayla dener.
@@ -763,7 +765,6 @@ def get_first_available_birth_date(identity_number, agency_id, update_customer=T
     """
     from database.models import Customer
 
-    # Doğum tarihi sorgu fonksiyonları
     birthdate_services = [
         get_customer_birthdate_backend,
         get_customer_birthdate_v2_backend,
@@ -776,25 +777,34 @@ def get_first_available_birth_date(identity_number, agency_id, update_customer=T
     dogum_tarihi = None
     result_success = False
 
+    logger.warning(f"📡 Doğum tarihi sorgusu başlatıldı → TC: {identity_number}, agency: {agency_id}")
+
     for service_func in birthdate_services:
         try:
+            logger.info(f"🔍 Servis deneniyor: {service_func.__name__}")
             result = service_func(identity_number, agency_id)
+
             if result and result.get("success") and result.get("birth_date"):
-                # Parse ve normalize et
-                dogum_tarihi = parse_date_from_string(result["birth_date"])
+                dogum_tarihi = parse_date(result["birth_date"])
 
                 if dogum_tarihi:
                     result_success = True
+                    logger.warning(f"✅ Doğum tarihi bulundu → {dogum_tarihi} (Servis: {service_func.__name__})")
                     break
-        except Exception as e:
-            continue  # Hatalı servis olursa sıradakine geç
+                else:
+                    logger.warning(f"⚠️ Doğum tarihi parse edilemedi (Servis: {service_func.__name__})")
+            else:
+                logger.warning(f"❌ Servis başarısız döndü: {service_func.__name__} → Yanıt: {result}")
 
-    # Müşteri kaydını güncelle
+        except Exception as e:
+            logger.exception(f"🚨 Servis hatası → {service_func.__name__}: {e}")
+
     if dogum_tarihi and update_customer:
         customer = Customer.objects.filter(identity_number=identity_number, agency_id=agency_id).first()
         if customer:
             customer.birth_date = dogum_tarihi
             customer.save(update_fields=["birth_date"])
+            logger.info(f"📌 Müşteri güncellendi → ID: {customer.id}, doğum tarihi: {dogum_tarihi}")
 
     return {
         "success": result_success,
@@ -854,7 +864,9 @@ def api_get_universal_birthdate(request):
         else:
             return JsonResponse({"success": False, "error": "Doğum tarihi bulunamadı"})
 
+
     except Exception as ex:
+        logger.exception("🚨 Doğum tarihi alma sırasında beklenmeyen bir hata oluştu")
         return JsonResponse({"success": False, "error": str(ex)}, status=500)
 
 
@@ -1967,7 +1979,7 @@ def call_katilim_customer_info_service(agency_id, kimlik_no, dogum_tarihi, servi
 
             # 🎯 Tüm tarih alanlarını otomatik parse et
             if isinstance(val, str) and "tarih" in key.lower():
-                parsed = parse_date_from_string(val)
+                parsed = parse_date(val)
                 if parsed:
                     val = parsed
 
@@ -1999,7 +2011,7 @@ def call_katilim_customer_info_service(agency_id, kimlik_no, dogum_tarihi, servi
             if val in [None, ""]:
                 val = None
             elif key in date_fields and isinstance(val, str):
-                val = parse_date_from_string(val)
+                val = parse_date(val)
             setattr(customer, key, val)
 
         customer.agency_id = agency_id
@@ -2084,7 +2096,7 @@ def call_katilim_corporate_service(vergi_no, agency_id, user=None, service_id=62
                         key = m.key.KeyName
                         val = value.get(m.company_key)
                         if key in ["birth_date", "VefatTarihi"]:
-                            val = parse_date_from_string(val) if val else None
+                            val = parse_date(val) if val else None
                         if val == "":
                             val = None
                         if key == "full_name":

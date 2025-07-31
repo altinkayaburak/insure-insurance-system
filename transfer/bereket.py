@@ -1,5 +1,5 @@
 import re
-
+import logging
 from django.db.models import Sum
 from jinja2 import Template
 import requests,xmltodict
@@ -14,6 +14,8 @@ from database.models import CompanyFieldMapping, Customer, Policy, PaymentPlan, 
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def print_tax_values(police_data):
@@ -35,7 +37,6 @@ def print_tax_values(police_data):
         vergi = to_decimal(t.get("VERGI"))
         total_dvergi += dvergi
         total_vergi += vergi
-
 
 
 def transfer_bereket(
@@ -812,7 +813,7 @@ def create_asset_home_from_mapping(police_data, policy_obj, agency_id, company_i
 
 
 def run_transfer_bereket_custom_api(agency_id, service_id, start_date, end_date):
-    print("🚀 [Bereket API] Veri çekme işlemi başlatıldı")
+    logger.warning("🚀 [Bereket API] Veri çekme işlemi başlatıldı")
 
     config = TransferServiceConfiguration.objects.get(id=service_id)
     password = AgencyPasswords.objects.get(
@@ -820,7 +821,6 @@ def run_transfer_bereket_custom_api(agency_id, service_id, start_date, end_date)
         insurance_company=config.insurance_company
     )
 
-    # ✅ Cookie string doğrudan headers'a aktarılıyor
     cookie_string = password.cookie.strip() if password.cookie else ""
 
     headers = {
@@ -828,7 +828,6 @@ def run_transfer_bereket_custom_api(agency_id, service_id, start_date, end_date)
         "Cookie": cookie_string
     }
 
-    # 🧠 submitAjaxEventConfig template render
     submit_template = Template(config.submit_ajax_template or "")
     submit_ajax_value = submit_template.render(
         baslangicTarihi=start_date.strftime("%d.%m.%Y"),
@@ -867,37 +866,29 @@ def run_transfer_bereket_custom_api(agency_id, service_id, start_date, end_date)
     session.mount("https://", SSLAdapter())
 
     try:
-        response = session.post(
-            full_url,
-            headers=headers,
-            data=payload,
-            timeout=60
-        )
+        response = session.post(full_url, headers=headers, data=payload, timeout=60)
 
-        print(f"📦 [Bereket API] Status: {response.status_code}")
-        print(f"📄 Yanıt: {response.text[:500]}...")
+        logger.warning(f"📦 [Bereket API] Status: {response.status_code}")
+        logger.warning(f"📄 Yanıt (ilk 500 karakter): {response.text[:500]}")
 
-        # 🎯 Yanıt içinden XLSX yolu çıkar
         match = re.search(r'Output/[\w\-]+\.xlsx', response.text)
         if not match:
-            print("❌ XLSX dosya yolu bulunamadı.")
+            logger.warning("❌ XLSX dosya yolu bulunamadı.")
             return response.text
 
         xlsx_path = match.group(0)
-
-        # 📥 Playwright ile XLSX indir
         xlsx_data = fetch_bereket_excel_with_playwright(xlsx_path, password)
 
         if xlsx_data:
-            print("✅ XLSX veri başarıyla alındı")
+            logger.warning("✅ XLSX veri başarıyla alındı")
             update_bereket_card_info_from_excel(xlsx_data, agency_id)
         else:
-            print("⚠️ XLSX veri alınamadı")
+            logger.warning("⚠️ XLSX veri alınamadı")
 
         return response.text
 
     except Exception as e:
-        print(f"❌ [Bereket API] Hata: {e}")
+        logger.exception(f"❌ [Bereket API] Hata oluştu: {e}")
         return None
 
 def fetch_bereket_excel_with_playwright(xlsx_path, password_obj):

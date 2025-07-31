@@ -1956,5 +1956,8 @@ def cookie_log_view(request):
         update_all_cookies_for_agency.delay(agency_id, source="manual")
         return redirect("cookie_logs")
 
-    logs = CookieLog.objects.filter(agency_id=agency_id).select_related("company")[:100]
+    logs = CookieLog.objects.filter(agency_id=agency_id)\
+                .select_related("company", "agency")\
+                .order_by("-created_at")[:20]  # 🔹 sadece son 10 kayıt
+
     return render(request, "database/cookie.html", {"logs": logs})

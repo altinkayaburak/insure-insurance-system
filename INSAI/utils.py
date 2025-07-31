@@ -12,6 +12,7 @@ import datetime
 from requests.auth import HTTPBasicAuth
 from database.models import Customer, CustomerContact, AssetCars, ExternalTramerPolicy
 import uuid
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -527,6 +528,7 @@ def normalize_empty(value):
         return None
     return value
 
+
 def parse_date(val):
     if not val:
         return None
@@ -539,38 +541,42 @@ def parse_date(val):
         except Exception:
             return datetime.datetime.combine(dt, datetime.time.min)
 
-    # ✅ .NET JSON tarih formatı: /Date(1753218000000)/
+    # ✅ .NET formatı: /Date(1753218000000)/
     if "Date(" in val:
         try:
             timestamp = int(re.search(r"\d+", val).group()) / 1000
             return make_aware(datetime.datetime.utcfromtimestamp(timestamp))
-        except Exception as e:
-            print("❌ .NET tarih parse hatası:", e, "| Girdi:", val)
+        except Exception:
+            return None
 
-    # ✅ 13 haneli timestamp string (örnek: 1753218000000)
+    # ✅ 13 haneli timestamp
     if val.isdigit() and len(val) == 13:
         try:
             return make_aware(datetime.datetime.utcfromtimestamp(int(val) / 1000))
-        except Exception as e:
-            print("❌ Timestamp tarih parse hatası:", e, "| Girdi:", val)
+        except Exception:
+            return None
 
-    try:
-        if re.match(r"\d{2}\.\d{2}\.\d{4}", val):
-            return make_dt(datetime.datetime.strptime(val, "%d.%m.%Y").date())
-        elif re.match(r"\d{4}-\d{2}-\d{2}", val):
-            return make_dt(datetime.datetime.strptime(val[:10], "%Y-%m-%d").date())
-        elif re.match(r"\d{2}/\d{2}/\d{4}", val):
-            return make_dt(datetime.datetime.strptime(val, "%d/%m/%Y").date())
-        elif re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", val):
-            return make_dt(datetime.datetime.strptime(val[:10], "%Y-%m-%d").date())
-        elif re.match(r"\d{8}", val):
-            return make_dt(datetime.datetime.strptime(val, "%Y%m%d").date())
+    # ✅ ISO 8601: 1998-05-16T00:00:00
+    if "T" in val:
+        val = val.split("T")[0]
 
-    except Exception as e:
-        print("❌ parse_date hatası:", e, "| Girdi:", val)
+    # ✅ Düz tarih formatlarını dene
+    date_formats = [
+        "%d.%m.%Y",  # 31.01.2025
+        "%Y-%m-%d",  # 2025-01-31
+        "%d/%m/%Y",  # 31/01/2025
+        "%Y/%m/%d",  # 2025/01/31
+        "%Y%m%d",    # 20250131
+        "%d%m%Y",    # 31012025
+    ]
+
+    for fmt in date_formats:
+        try:
+            return make_dt(datetime.datetime.strptime(val[:10], fmt).date())
+        except Exception:
+            continue
 
     return None
-
 
 
 def split_date_range(start_date, end_date, days=3):
@@ -676,36 +682,7 @@ def get_by_path(data, path_str):
     return data
 
 
-def parse_date_from_string(val):
-    if not val:
-        return None
 
-    val = val.strip()
-
-    try:
-        # 1998-05-16T00:00:00 gibi ISO formatı
-        if "T" in val:
-            val = val.split("T")[0]
-
-        # GG.AA.YYYY
-        if re.match(r"\d{2}\.\d{2}\.\d{4}$", val):
-            return datetime.strptime(val, "%d.%m.%Y").date()
-        # YYYY-MM-DD
-        elif re.match(r"\d{4}-\d{2}-\d{2}$", val):
-            return datetime.strptime(val, "%Y-%m-%d").date()
-        # YYYY/MM/DD
-        elif re.match(r"\d{4}/\d{2}/\d{2}$", val):
-            return datetime.strptime(val, "%Y/%m/%d").date()
-        # GG/AA/YYYY
-        elif re.match(r"\d{2}/\d{2}/\d{4}$", val):
-            return datetime.strptime(val, "%d/%m/%Y").date()
-        # Düz 8 hane: 31012025
-        elif re.match(r"\d{8}$", val):
-            return datetime.strptime(val, "%d%m%Y").date()
-    except Exception:
-        pass
-
-    return None
 
 def get_api_token_from_passwords(password_info):
     """

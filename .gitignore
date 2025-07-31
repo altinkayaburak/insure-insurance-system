@@ -10,7 +10,8 @@ db.sqlite3
 # Ortam dosyaları
 .env
 *.log
-
+bak_files/
+mssql_data/
 # Yerel ayarlar
 INSAI/settings_local.py
 

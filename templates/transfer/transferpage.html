@@ -429,6 +429,17 @@ document.getElementById("triggerAllTransfers").addEventListener("click", async f
 
 <script>
 function triggerCreditCardTask(company_id) {
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+
+  if (!startDate || !endDate) {
+    showGlobalModalPopup("Lütfen başlangıç ve bitiş tarihi girin.", {
+      type: "warning",
+      showOk: true
+    });
+    return;
+  }
+
   showGlobalModalPopup(
     "Bu şirkete ait kart mutabakatı başlatılsın mı?",
     {
@@ -439,19 +450,15 @@ function triggerCreditCardTask(company_id) {
       showCancel: true,
       cancelText: "Hayır",
       onOk: () => {
-        fetch(`/transfer/trigger-card-task/?company_id=${company_id}`)
+        fetch(`/transfer/trigger-card-task/?company_id=${company_id}&start_date=${startDate}&end_date=${endDate}`)
           .then(response => response.json())
           .then(data => {
             if (data.status === "started") {
-              showGlobalModalPopup(
-                "Kart mutabakatı başladı. Birkaç dakika sonra poliçeleri kontrol edebilirsiniz.",
-                {
-                  type: "info",
-                  title: "Kart Mutabakatı",
-                  showOk: true,
-                  okText: "Tamam"
-                }
-              );
+              showGlobalModalPopup("Kart mutabakatı başladı. Birkaç dakika sonra poliçeleri kontrol edebilirsiniz.", {
+                type: "info",
+                title: "Kart Mutabakatı",
+                showOk: true
+              });
             } else if (data.status === "not_found") {
               showGlobalModalPopup("⚠️ Şirket bulunamadı veya tanımlı handler yok.", {
                 type: "warning",
@@ -480,6 +487,7 @@ function triggerCreditCardTask(company_id) {
     }
   );
 }
+
 </script>
 
 

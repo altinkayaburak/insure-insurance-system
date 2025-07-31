@@ -1,24 +1,24 @@
 version: "3.8"
 
 services:
-  web:
-    build:
-      context: .
-    container_name: web
-    command: [ "python","manage.py", "runserver",  "0.0.0.0:8001" ]
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-      - redis
-    environment:
-      - DOCKERIZED=true
-      - DB_HOST=db
-      - DB_USER=insai_worker
-      - DB_PASSWORD=Insai2025secure
-      - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
-    ports:
-      - "8001:8001"
+  #web:
+  #  build:
+  #    context: .
+  #  container_name: web
+  #  command: [ "python","manage.py", "runserver",  "0.0.0.0:8001" ]
+  #  volumes:
+  #    - .:/app
+  #  depends_on:
+  #    - db
+  #    - redis
+  #  environment:
+  #    - DOCKERIZED=true
+  #    - DB_HOST=db
+  #    - DB_USER=insai_worker
+  #    - DB_PASSWORD=Insai2025secure
+  #    - OPENSSL_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=1
+  #  ports:
+  #    - "8001:8001"
 
 
   redis:
@@ -44,7 +44,7 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - web
+    #  - web
       - redis
     environment:
       - DOCKERIZED=true
@@ -71,7 +71,7 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - web
+    #  - web
       - redis
     environment:
       - DOCKERIZED=true
@@ -88,7 +88,7 @@ services:
     ports:
       - "1453:1433"
     volumes:
-      - C:\Users\Burak.Altinkaya\OneDrive - ARMOR KATILIM SİGORTA VE REASURANS BROKERLİĞİ ANON\Masaüstü\mssql_data/data:/var/opt/mssql/data
-      - C:\Users\Burak.Altinkaya\OneDrive - ARMOR KATILIM SİGORTA VE REASURANS BROKERLİĞİ ANON\Masaüstü\mssql_data/log:/var/opt/mssql/log
-      - C:\Users\Burak.Altinkaya\OneDrive - ARMOR KATILIM SİGORTA VE REASURANS BROKERLİĞİ ANON\Masaüstü\mssql_data/secrets:/var/opt/mssql/secrets
+      - ./mssql_data/data:/var/opt/mssql/data
+      - ./mssql_data/log:/var/opt/mssql/log
+      - ./mssql_data/secrets:/var/opt/mssql/secrets
       - ./bak_files:/bak_files

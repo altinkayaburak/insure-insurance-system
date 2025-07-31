@@ -807,8 +807,15 @@ def trigger_card_task(request):
         return JsonResponse({"status": "service_not_found"})
 
     # ⏱ Tarih aralığı
-    start_date = (now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    end_date = now().strftime("%Y-%m-%d")
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    # TODO: burdaki tarihi 7 ser günlük arayla filtrele
+    # Eğer dışarıdan gelmediyse default olarak son 7 günü al
+    if not start_date or not end_date:
+        start_date = (now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = now().strftime("%Y-%m-%d")
+
+
     agency_id = request.user.agency_id
 
     try:

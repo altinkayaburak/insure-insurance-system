@@ -10,14 +10,17 @@ from django.http import JsonResponse
 from INSAI.utils import SSLAdapter, get_api_token_from_passwords
 from agency.models import AgencyTransferServiceAuthorization, AgencyPasswords
 from agencyusers.models import Users
-from cookie.tasks import update_neova_cookies
+from cookie.tasks import update_neova_cookies,update_bereket_cookies
 from database.models import TransferServiceConfiguration
 import datetime
 from transfer.bereket import update_bereket_card_info_from_excel, fetch_bereket_excel_with_playwright
 from transfer.hdi_katilim import fetch_card_info_hdi_katilim
 from transfer.models import TransferLog
 from transfer.neova import fetch_neova_excel_with_playwright, update_neova_card_info_from_excel
+import logging
+from io import BytesIO
 
+logger = logging.getLogger(__name__)
 
 def split_date_range(start_date, end_date, days=3):
     ranges = []
@@ -173,19 +176,14 @@ def run_post_transfer_services_task(agency_id, company_id):
         print(f"❌ run_post_transfer_services_task hata: {e}")
 
 @shared_task(bind=True, name="run_bereket_card_info_task")
-def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_date_str, is_retry=False):
-    from cookie.tasks import update_bereket_cookies
-    import datetime
-    import re
-    from io import BytesIO
-
-    print("🚀 [Celery] Bereket kart task başladı...")
+def run_bereket_card_info_task(self, agency_id, service_id, start_date, end_date, is_retry=False):
+    logger.warning("🚀 [Celery] Bereket kredi kartı task başlatıldı...")
 
     try:
         update_bereket_cookies(agency_id)
-        print("🔑 [Bereket] Cookie güncellendi.")
+        logger.warning("🔑 [Bereket] Cookie güncellendi.")
     except Exception as e:
-        print(f"❌ [Bereket] Cookie güncellenemedi: {e}")
+        logger.warning(f"❌ [Bereket] Cookie güncellenemedi: {e}")
         if not is_retry:
             return run_bereket_card_info_task.apply_async(
                 args=[agency_id, service_id, start_date_str, end_date_str],
@@ -194,8 +192,11 @@ def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_
             )
         return
 
-    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
-    end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
+    logger.warning(
+        f"{start_date} ({type(start_date)}) - {end_date} ({type(end_date)}) *************docker show me ****************"
+    )
+    start_date_dt = datetime.datetime.strptime(start_date, "%d/%m/%Y")
+    end_date_dt = datetime.datetime.strptime(end_date, "%d/%m/%Y")
 
     try:
         config = TransferServiceConfiguration.objects.get(id=service_id)
@@ -212,8 +213,8 @@ def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_
 
         submit_template = Template(config.submit_ajax_template or "")
         submit_ajax_value = submit_template.render(
-            baslangicTarihi=start_date.strftime("%d.%m.%Y"),
-            bitisTarihi=end_date.strftime("%d.%m.%Y")
+            baslangicTarihi=start_date_dt.strftime("%d.%m.%Y"),
+            bitisTarihi=end_date_dt.strftime("%d.%m.%Y")
         )
 
         payload = {
@@ -226,8 +227,8 @@ def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_
             "cboDynParam701_Value": "G",
             "cboDynParam701": "Güncel",
             "cboDynParam701_SelIndex": "0",
-            "dtDynParam5": start_date.strftime("%d.%m.%Y"),
-            "dtDynParam6": end_date.strftime("%d.%m.%Y"),
+            "dtDynParam5": start_date_dt.strftime("%d.%m.%Y"),
+            "dtDynParam6": end_date_dt.strftime("%d.%m.%Y"),
             "cboDynParam490_SelIndex": "0",
             "cboDynParam491_SelIndex": "0",
             "cboDynParam492_Value": "34001722",
@@ -246,28 +247,29 @@ def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_
         session = requests.Session()
         session.mount("https://", SSLAdapter())
         response = session.post(config.url, headers=headers, data=payload, timeout=60)
+        for k, v in payload.items():
+            logger.warning(f"    {k} = {v}")
 
-        print(f"📦 [Bereket API] Status: {response.status_code}")
-        print(f"📄 Yanıt: {response.text[:500]}...")
+        logger.warning(f"📦 [Bereket API] Status: {response.status_code}")
+        logger.warning(f"📄 Yanıt: {response.text[:500]}...")
 
         match = re.search(r'Output/[\w\-]+\.xlsx', response.text)
         if not match:
-            print("❌ XLSX yolu bulunamadı")
+            logger.warning("❌ XLSX yolu bulunamadı.")
             return
 
         xlsx_path = match.group(0)
         xlsx_data = fetch_bereket_excel_with_playwright(xlsx_path, password)
 
         if not xlsx_data:
-            print("⚠️ XLSX indirilemedi")
+            logger.warning("⚠️ XLSX dosyası indirilemedi.")
             return
 
-        print("✅ XLSX başarıyla alındı, işleniyor...")
+        logger.warning("✅ XLSX başarıyla alındı, işleniyor...")
 
-        # Kayıtları güncelle ve logla
         updated_count, read_count = update_bereket_card_info_from_excel(xlsx_data, agency_id)
 
-        print("\n📋 Güncellenen Poliçeler:")
+        logger.warning("\n📋 Güncellenen Poliçeler:")
         df = pd.read_excel(BytesIO(xlsx_data), header=None)
         for i, row in df.iterrows():
             if i == 0:
@@ -277,12 +279,12 @@ def run_bereket_card_info_task(self, agency_id, service_id, start_date_str, end_
             borclu = str(row[7]).strip() if pd.notna(row[7]) else ""
             kartno = str(row[9]).strip() if pd.notna(row[9]) else ""
             if poliseno and kartno:
-                print(f"🧾 {poliseno} - Zeyil {zeyil} - {borclu} - {kartno}")
+                logger.warning(f"🧾 {poliseno} - Zeyil {zeyil} - {borclu} - {kartno}")
 
-        print(f"\n🎯 Tamamlandı → Toplam okunan: {read_count} / Güncellenen: {updated_count}")
+        logger.warning(f"\n🎯 Tamamlandı → Toplam okunan: {read_count} / Güncellenen: {updated_count}")
 
     except Exception as e:
-        print(f"❌ [Bereket Card Task] Hata: {e}")
+        logger.exception(f"❌ [Bereket Card Task] Hata: {e}")
         raise self.retry(exc=e, countdown=30, max_retries=3)
 
 
